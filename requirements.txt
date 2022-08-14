@@ -1,0 +1,2 @@
+git+https://github.com/seasidesparrow/ADSIngestParser.git
+adsputils==1.3.0
