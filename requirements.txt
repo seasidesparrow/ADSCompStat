@@ -1,2 +1,5 @@
 git+https://github.com/seasidesparrow/ADSIngestParser.git
 adsputils==1.3.0
+psycopg2-binary==2.8.6
+SQLAlchemy-Utils==0.38.2
+alembic==1.0.0
