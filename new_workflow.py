@@ -32,5 +32,5 @@ for f in infiles:
                    'first_author': first_author,
                    'title': title}
         source_file = f
-        output_rec = (doi, issns, bib_data, source_file)
+        output_rec = (doi, json.dumps(issns), json.dumps(bib_data), source_file)
     

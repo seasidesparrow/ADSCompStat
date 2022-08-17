@@ -1,31 +1,20 @@
-#from __future__ import absolute_import, unicode_literals
-from config import *
-
-#from adscompstat import app as app_module
+import os
+from kombu import Queue
+from adscompstat import app as app_module
 from adscompstat import utils
 from adscompstat.bibcodes import BibcodeGenerator
 from adscompstat.match import CrossrefMatcher
 from adscompstat.exceptions import *
 
-import os
-#from kombu import Queue
-#from sqlalchemy import exc
+proj_home = os.path.realpath(os.path.join(os.path.dirname(__file__), '../'))
+app = app_module.ADSCompStatCelery('compstat-pipeline', proj_home=proj_home, config=globals().get('config', {}), local_config=globals().get('local_config', {}))
+logger = app.logger
 
-from datetime import datetime
-
-# ============================= INITIALIZATION ==================================== #
-
-#proj_home = os.path.realpath(os.path.join(os.path.dirname(__file__), '../'))
-#app = app_module.ADSCompletenessCelery('journals-database', proj_home=proj_home, local_config=globals().get('local_config', {}))
-#logger = app.logger
-
-
-#app.conf.CELERY_QUEUES = (
-#    Queue('do-completeness', app.exchange, routing_key='do-completeness'),
-#)
-
-# ============================= TASKS ============================================= #
-
+app.conf.CELERY_QUEUES = (
+    Queue('parse-meta', app.exchange, routing_key='parse-meta'),
+    Queue('match-classic', app.exchange, routing_key='match-classic'),
+    Queue('compute-stats', app.exchange, routing_key='calc-completeness')
+)
 
 try:
     xmatch = CrossrefMatcher()
@@ -34,10 +23,10 @@ except Exception as err:
     raise NoDataHandlerException(err)
 
 
-#@app.task(queue='do-completeness')
+@app.task(queue='parse-meta')
 def task_process_xref_xml(infile):
     try:
-        filename = HARVEST_BASE_DIR + '/' + infile
+        filename = config.get('HARVEST_BASE_DIR') + '/' + infile
         record = utils.parse_one_meta_xml(filename)
         if record:
             try:
