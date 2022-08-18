@@ -1,4 +1,4 @@
-from .exceptions import *
+from adscompstat.exceptions import *
 from adsingestp.parsers.crossref import CrossrefParser
 from glob import glob
 
@@ -46,7 +46,7 @@ def read_updateagent_log(logfile):
 def parse_one_meta_xml(filename):
     try:
         record = dict()
-        with open(filename,'rb') as fx:
+        with open(filename,'r') as fx:
             data = fx.read()
             try:
                 parser = CrossrefParser()

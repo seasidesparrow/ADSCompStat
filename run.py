@@ -1,6 +1,6 @@
-from adscompleteness import utils
-from adscompleteness import tasks
-from adscompleteness.exceptions import GetLogException
+from adscompstat import utils
+from adscompstat import tasks
+from adscompstat.exceptions import GetLogException
 from config import *
 import argparse
 import json
