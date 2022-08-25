@@ -33,6 +33,7 @@ class CrossrefMatcher(object):
             if testRemainder == classicRemainder:
                 returnDict['match'] = 'Partial'
                 errs = {}
+                errs['bibcode'] = classicBibcode
                 if testYear != classicYear:
                     errs['year'] = classicYear
                 if testQual != classicQual:
@@ -61,10 +62,13 @@ class CrossrefMatcher(object):
                 allBibList = self.classicAllBibDict.get(classicBibcode, [])
                 if testBibcode in altBibList:
                     returnDict['match'] = 'Alternate'
+                    returnDict['errs'] = {'bibcode': classicBibcode}
                 elif testBibcode in delBibList:
                     returnDict['match'] = 'Deleted'
+                    returnDict['errs'] = {'bibcode': classicBibcode}
                 elif testBibcode in allBibList:
                     returnDict['match'] = 'Other'
+                    returnDict['errs'] = {'bibcode': classicBibcode}
                 else:
                     returnDict = self._match_bibcode_permutations(testBibcode, classicBibcode)
             if returnDict:

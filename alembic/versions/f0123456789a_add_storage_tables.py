@@ -22,7 +22,6 @@ def upgrade():
     op.create_table('master',
                     sa.Column('masterid', sa.Integer(), autoincrement=True,
                               nullable=False),
-                    sa.Column('harvest_logfile', sa.String(), nullable=True),
                     sa.Column('harvest_filepath', sa.String(), nullable=False),
                     sa.Column('master_doi', sa.String(), nullable=False),
                     sa.Column('issns', sa.Text(), nullable=True),
