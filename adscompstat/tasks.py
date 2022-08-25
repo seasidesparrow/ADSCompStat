@@ -1,3 +1,4 @@
+import json
 import os
 from kombu import Queue
 from adscompstat.models import CompStatMaster as master
@@ -57,7 +58,7 @@ def task_match_record_to_classic(processingRecord):
                               matchtype=matchtype)
         task_write_result_to_db.delay(outputRecord)
     except Exception as err:
-        logger.warn("Error matching record")
+        logger.warn("Error matching record: %s" % err)
 
 @app.task(queue='parse-meta')
 def task_add_bibcode(outputRecord):
@@ -110,6 +111,7 @@ def task_process_logfile(infile):
     try:
         files_to_process = utils.read_updateagent_log(infile)
         for xmlFile in files_to_process:
+            xmlFile = app.conf.get('HARVEST_BASE_DIR', '/') + xmlFile
             try:
                 task_process_metafile.delay(xmlFile)
             except Exception as err:
