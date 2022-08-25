@@ -55,7 +55,7 @@ def task_match_record_to_classic(processingRecord):
                               classic_match=classic_match,
                               status=status,
                               matchtype=matchtype)
-        task_write_result_to_db(outputRecord)
+        task_write_result_to_db.delay(outputRecord)
     except Exception as err:
         logger.warn("Error matching record")
 
@@ -70,7 +70,7 @@ def task_add_bibcode(outputRecord):
             logger.warn("Failed to create bibcode for file %s: %s" % (sourceFile, err))
             bibcode = None
         outputRecord['bibcode'] = bibcode
-        task_match_record_to_classic(outputRecord)
+        task_match_record_to_classic.delay(outputRecord)
 
 @app.task(queue='parse-meta')
 def task_process_metafile(infile)
@@ -104,3 +104,15 @@ def task_process_metafile(infile)
                             'issns': json.dumps(bib_data),
                             'master_bibdata': json.dumps(bib_data)}
         task_match_record_to_classic.delay(processingRecord)
+
+@app.task(queue='parse-meta')
+def task_process_logfile(infile):
+    try:
+        files_to_process = utils.read_updateagent_log(infile)
+        for xmlFile in files_to_process:
+            try:
+                task_process_metafile.delay(xmlFile)
+            except Exception as err:
+                logger.warn("error processing xmlFile %s: %s" % (xmlFile, err))
+    except Exception as err:
+        logger.warn("error processing logfile %s: %s" % (infile, err))
