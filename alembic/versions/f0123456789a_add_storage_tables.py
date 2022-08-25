@@ -38,6 +38,7 @@ def upgrade():
                                                            'Alternate',
                                                            'Partial',
                                                            'Mismatch',
+                                                           'Other',
                                                            name='match_type'),
                               nullable=False),
                     sa.Column('created', UTCDateTime, nullable=True,
@@ -73,7 +74,7 @@ def downgrade():
     match_status = postgresql.ENUM('Matched', 'Unmatched', 'NoIndex',
                                    name='match_status')
     match_type = postgresql.ENUM('Exact', 'Deleted', 'Alternate', 
-                                 'Partial', 'Mismatch', name='match_type')
+                                 'Partial', 'Mismatch', 'Other', name='match_type')
     match_status.drop(op.get_bind())
     match_type.drop(op.get_bind())
     

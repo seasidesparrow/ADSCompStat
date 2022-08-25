@@ -73,7 +73,7 @@ def task_add_bibcode(outputRecord):
         task_match_record_to_classic.delay(outputRecord)
 
 @app.task(queue='parse-meta')
-def task_process_metafile(infile)
+def task_process_metafile(infile):
     record = utils.parse_one_meta_xml(infile)
     try:
         publication = record.get('publication', None)
