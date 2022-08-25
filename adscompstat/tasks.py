@@ -51,19 +51,27 @@ def task_match_record_to_classic(processingRecord):
         if matchtype in allowedMatchType:
             status = 'Matched'
         classic_match = xmatchResult.get('errs', None)
-        if classic_match:
+        if type(classic_match) == dict:
             classic_match = json.dumps(classic_match)
+        issns = processingRecord.get('issns', None)
+        if type(issns) == dict:
+            issns = json.dumps(issns)
+        master_bibdata = processingRecord.get('master_bibdata', None)
+        logger.warn("master_bibdata type is %s" % type(master_bibdata))
+        if type(master_bibdata) == dict:
+            master_bibdata = json.dumps(master_bibdata)
     except Exception as err:
         logger.warn("Error matching record: %s" % err)
     else:
         try:
-            outputRecord = (processingRecord.get('harvest_filepath', None),
-                            processingRecord.get('master_doi', None),
-                            json.dumps(processingRecord.get('issns', None)),
-                            json.dumps(processingRecord.get('master_bibdata', None)),
-                           classic_match,
-                           status,
-                           matchtype)
+            outputRecord = (harvest_filepath,
+                            master_doi,
+                            issns,
+                            master_bibdata,
+                            classic_match,
+                            status,
+                            matchtype)
+            logger.info("outputRecord: %s" % str(outputRecord))
             task_write_result_to_db.delay(outputRecord)
         except Exception as err:
             logger.warn("Error creating a models record: %s" % err)

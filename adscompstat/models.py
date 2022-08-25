@@ -13,8 +13,8 @@ Base = declarative_base()
 class CompStatMaster(Base):
     __tablename__ = 'master'
 
-    match_status = ENUM('Matched', 'Unmatched', 'NoIndex')
-    match_type = ENUM('Exact', 'Deleted', 'Alternate', 'Partial', 'Mismatch', 'Other')
+    match_status = ENUM('Matched', 'Unmatched', 'NoIndex', name='match_status')
+    match_type = ENUM('Exact', 'Deleted', 'Alternate', 'Partial', 'Mismatch', 'Other', name='match_type')
 
     masterid = Column(Integer, primary_key=True, unique=True)
     harvest_filepath = Column(String, nullable=False)
