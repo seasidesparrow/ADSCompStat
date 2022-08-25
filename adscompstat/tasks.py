@@ -27,10 +27,14 @@ except Exception as err:
 
 @app.task(queue='compute-stats')
 def task_write_result_to_db(inrec):
-    with app.session_scope as session:
+    with app.session_scope() as session:
         try:
             outrec = master(harvest_filepath=inrec[0],
                             master_doi=inrec[1],
+                            issns=inrec[2],
+                            db_origin='Crossref',
+                            master_bibdata=inrec[3],
+                            classic_match=inrec[4],
                             status=inrec[5],
                             matchtype=inrec[6])
             session.add(outrec)
