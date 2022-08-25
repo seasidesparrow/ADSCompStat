@@ -50,13 +50,16 @@ def task_match_record_to_classic(processingRecord):
         recBibcode = bibgen.make_bibcode(record)
         recDOI = processingRecord.get('doi', None)
         xmatchResult = xmatch.match(recDOI, recBibcode)
-        status = 'Unmatched'
         matchtype = xmatchResult.get('match', None)
         harvest_filepath = processingRecord.get('harvest_filepath', None)
         logger.info("harvest_filepath type is %s" % type(harvest_filepath))
         master_doi = processingRecord.get('master_doi', None)
         if matchtype in allowedMatchType:
             status = 'Matched'
+        else:
+            status = 'Unmatched'
+        if matchtype == 'Classic Canonical Bibcode':
+            matchtype = 'Other'
         classic_match = xmatchResult.get('errs', None)
         if type(classic_match) == dict:
             classic_match = json.dumps(classic_match)
