@@ -48,6 +48,9 @@ def task_match_record_to_classic(processingRecord):
         xmatchResult = xmatch.match(recDOI, recBibcode)
         status = 'Unmatched'
         matchtype = xmatchResult.get('match', None)
+        harvest_filepath = processingRecord.get('harvest_filepath', None)
+        logger.info("harvest_filepath type is %s" % type(harvest_filepath))
+        master_doi = processingRecord.get('master_doi', None)
         if matchtype in allowedMatchType:
             status = 'Matched'
         classic_match = xmatchResult.get('errs', None)
