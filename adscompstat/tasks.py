@@ -26,10 +26,18 @@ except Exception as err:
     raise NoDataHandlerException(err)
 
 @app.task(queue='compute-stats')
-def task_write_result_to_db(outputRecord):
+def task_write_result_to_db(inrec):
     with app.session_scope as session:
         try:
-            session.add(outputRecord)
+            
+            outrec = master(harvest_filepath=inrec[0],
+                            master_doi=inrec[1],
+                            issns=inrec[2],
+                            master_bibdata=inrec[3],
+                            classic_match=inrec[4],
+                            status=inrec[5],
+                            matchtype=inrec[6])
+            session.add(outrec)
             session.commit()
         except Exception as err:
             logger.error("Problem with database commit: %s" % err)
@@ -53,13 +61,13 @@ def task_match_record_to_classic(processingRecord):
         logger.warn("Error matching record: %s" % err)
     else:
         try:
-            outputRecord = master(harvest_filepath=processingRecord.get('harvest_filepath', None),
-                                  master_doi=processingRecord.get('master_doi', None),
-                                  issns=processingRecord.get('issns', None),
-                                  master_bibdata=processingRecord.get('master_bibdata', None),
-                                  classic_match=classic_match,
-                                  status=status,
-                                  matchtype=matchtype)
+            outputRecord = (processingRecord.get('harvest_filepath', None),
+                            processingRecord.get('master_doi', None),
+                            json.dumps(processingRecord.get('issns', None)),
+                            json.dumps(processingRecord.get('master_bibdata', None)),
+                           classic_match,
+                           status,
+                           matchtype)
             task_write_result_to_db.delay(outputRecord)
         except Exception as err:
             logger.warn("Error creating a models record: %s" % err)
