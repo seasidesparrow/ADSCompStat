@@ -75,9 +75,10 @@ def downgrade():
                                    name='match_status')
     match_type = postgresql.ENUM('Exact', 'Deleted', 'Alternate', 
                                  'Partial', 'Mismatch', 'Other', name='match_type')
+    op.drop_table('master')
+    op.drop_table('summary')
+
     match_status.drop(op.get_bind())
     match_type.drop(op.get_bind())
     
-    op.drop_table('master')
-    op.drop_table('summary')
     # ### end Alembic commands ###
