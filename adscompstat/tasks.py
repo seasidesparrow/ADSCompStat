@@ -1,5 +1,7 @@
 import os
 from kombu import Queue
+from adscompstat.models import CompStatMaster as master
+from adscompstat.models import CompStatSummary as summary
 from adscompstat import app as app_module
 from adscompstat import utils
 from adscompstat.bibcodes import BibcodeGenerator
@@ -22,6 +24,56 @@ try:
 except Exception as err:
     raise NoDataHandlerException(err)
 
+
+@app.task(queue='parse-meta')
+def task_process_metafile(infile)
+    record = utils.parse_one_meta_xml(infile)
+    try:
+        publication = record.get('publication', None)
+        pagination = record.get('pagination', None)
+        pids = record.get('persistentIDs', None)
+        first_author = record.get('authors', None)
+        title = record.get('title', None)
+        if publication:
+            pub_year = publication.get('pubYear', None)
+            issns = publication.get('ISSN', None)
+        if pids:
+            for pid in pids:
+                if pid.get('DOI', None):
+                    doi = pid.get('DOI', None)
+        if first_author:
+            first_author = first_author[0]
+    except Exception as err:
+        print('oh noes! %s' % err)
+    else:
+        bib_data = {'publication': publication,
+                   'pagination': pagination,
+                   'persistentIDs': pids,
+                   'first_author': first_author,
+                   'title': title}
+        source_file = infile
+        output_rec = (doi, json.dumps(issns), json.dumps(bib_data), source_file)
+        task_add_bibcode(record, output_rec)
+
+@app.task(queue='parse-meta')
+def task_add_bibcode(outputRecord):
+    publisherRecord = outputRecord.get('pubRec', None)
+    if publisherRecord:
+        try:
+            sourceFile = outputRecord.get('sourceFile', None)
+            bibcode = bibgen.make_bibcode(record)
+        except Exception as err:
+            logger.warn("Failed to create bibcode for file %s: %s" % (sourceFile, err))
+            bibcode = None
+        outputRecord['bibcode'] = bibcode
+        task_match_record_to_classic(outputRecord)
+
+@app.task(queue='match-classic')
+def task_match_record_to_classic(outputRecord):
+    recDOI = outputRecord.get('doi', None)
+    recBibcode = outputRecord.get('bibcode', None)
+    outputRecord['result'] = xmatch.match(recDOI, recBibcode)
+    task_write_result_to_db(outputRecord)
 
 @app.task(queue='parse-meta')
 def task_process_xref_xml(infile):

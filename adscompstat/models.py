@@ -39,7 +39,7 @@ class CompStatMaster(Base):
                 'master_doi': self.master_doi,
                 'issns': self.issns,
                 'db_origin': self.db_origin,
-                'master_bibdata': self.master_bibdate,
+                'master_bibdata': self.master_bibdata,
                 'classic_match': self.classic_match,
                 'status': self.status,
                 'matchtype': self.matchtype,
