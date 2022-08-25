@@ -49,16 +49,20 @@ def task_match_record_to_classic(processingRecord):
         classic_match = xmatchResult.get('errs', None)
         if classic_match:
             classic_match = json.dumps(classic_match)
-        outputRecord = master(harvest_filepath=processingRecord.get('harvest_filepath', None),
-                              master_doi=processingRecord.get('master_doi', None),
-                              issns=processingRecord.get('issns', None),
-                              master_bibdata=processingRecord.get('master_bibdata', None),
-                              classic_match=classic_match,
-                              status=status,
-                              matchtype=matchtype)
-        task_write_result_to_db.delay(outputRecord)
     except Exception as err:
         logger.warn("Error matching record: %s" % err)
+    else:
+        try:
+            outputRecord = master(harvest_filepath=processingRecord.get('harvest_filepath', None),
+                                  master_doi=processingRecord.get('master_doi', None),
+                                  issns=processingRecord.get('issns', None),
+                                  master_bibdata=processingRecord.get('master_bibdata', None),
+                                  classic_match=classic_match,
+                                  status=status,
+                                  matchtype=matchtype)
+            task_write_result_to_db.delay(outputRecord)
+        except Exception as err:
+            logger.warn("Error creating a models record: %s" % err)
 
 @app.task(queue='parse-meta')
 def task_add_bibcode(outputRecord):
@@ -102,7 +106,7 @@ def task_process_metafile(infile):
         processingRecord = {'record': record,
                             'harvest_filepath': infile,
                             'master_doi': doi,
-                            'issns': json.dumps(bib_data),
+                            'issns': json.dumps(issns),
                             'master_bibdata': json.dumps(bib_data)}
         task_match_record_to_classic.delay(processingRecord)
 
