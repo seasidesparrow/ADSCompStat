@@ -20,8 +20,10 @@ app.conf.CELERY_QUEUES = (
 )
 
 try:
+    i2b = app.conf.get('ISSN2BIBSTEM', None)
+    n2b = app.conf.get('NAME2BIBSTEM', None)
     xmatch = CrossrefMatcher()
-    bibgen = BibcodeGenerator()
+    bibgen = BibcodeGenerator(issn2bibstem=i2b, name2bibstem=n2b)
 except Exception as err:
     raise NoDataHandlerException(err)
 
@@ -52,7 +54,6 @@ def task_match_record_to_classic(processingRecord):
         xmatchResult = xmatch.match(recDOI, recBibcode)
         matchtype = xmatchResult.get('match', None)
         harvest_filepath = processingRecord.get('harvest_filepath', None)
-        logger.info("harvest_filepath type is %s" % type(harvest_filepath))
         master_doi = processingRecord.get('master_doi', None)
         if matchtype in allowedMatchType:
             status = 'Matched'
@@ -67,7 +68,6 @@ def task_match_record_to_classic(processingRecord):
         if type(issns) == dict:
             issns = json.dumps(issns)
         master_bibdata = processingRecord.get('master_bibdata', None)
-        logger.warn("master_bibdata type is %s" % type(master_bibdata))
         if type(master_bibdata) == dict:
             master_bibdata = json.dumps(master_bibdata)
     except Exception as err:
@@ -81,7 +81,6 @@ def task_match_record_to_classic(processingRecord):
                             classic_match,
                             status,
                             matchtype)
-            logger.info("outputRecord: %s" % str(outputRecord))
             task_write_result_to_db.delay(outputRecord)
         except Exception as err:
             logger.warn("Error creating a models record: %s" % err)
