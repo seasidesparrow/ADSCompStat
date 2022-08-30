@@ -16,7 +16,10 @@ logger = app.logger
 app.conf.CELERY_QUEUES = (
     Queue('parse-meta', app.exchange, routing_key='parse-meta'),
     Queue('match-classic', app.exchange, routing_key='match-classic'),
-    Queue('compute-stats', app.exchange, routing_key='compute-stats')
+    Queue('compute-stats', app.exchange, routing_key='compute-stats'),
+    Queue('get-logfiles', app.exchange, routing_key='get-logfiles'),
+    Queue('add-bibcode', app.exchange, routing_key='add-bibcode'),
+    Queue('output-metadata', app.exchange, routing_key='output-metadata')
 )
 
 try:
