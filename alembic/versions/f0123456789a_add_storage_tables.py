@@ -22,7 +22,6 @@ def upgrade():
     op.create_table('master',
                     sa.Column('masterid', sa.Integer(), autoincrement=True,
                               nullable=False),
-                    sa.Column('harvest_logfile', sa.String(), nullable=True),
                     sa.Column('harvest_filepath', sa.String(), nullable=False),
                     sa.Column('master_doi', sa.String(), nullable=False),
                     sa.Column('issns', sa.Text(), nullable=True),
@@ -39,6 +38,8 @@ def upgrade():
                                                            'Alternate',
                                                            'Partial',
                                                            'Mismatch',
+                                                           'Unmatched',
+                                                           'Other',
                                                            name='match_type'),
                               nullable=False),
                     sa.Column('created', UTCDateTime, nullable=True,
@@ -53,11 +54,11 @@ def upgrade():
     op.create_table('summary',
                     sa.Column('summaryid', sa.Integer(), autoincrement=True,
                               nullable=False),
-                    sa.Column('bibstem', sa.String(), unique=True, 
+                    sa.Column('bibstem', sa.String(), unique=True,
                               nullable=False),
                     sa.Column('complete_flag', sa.Boolean(), nullable=True),
                     sa.Column('complete_fraction', sa.Float(), nullable=True),
-                    sa.Column('complete_byvolume', sa.Text(), 
+                    sa.Column('complete_byvolume', sa.Text(),
                               nullable=True),
                     sa.Column('created', UTCDateTime, nullable=True,
                               default=get_date),
@@ -73,11 +74,13 @@ def upgrade():
 def downgrade():
     match_status = postgresql.ENUM('Matched', 'Unmatched', 'NoIndex',
                                    name='match_status')
-    match_type = postgresql.ENUM('Exact', 'Deleted', 'Alternate', 
-                                 'Partial', 'Mismatch', name='match_type')
-    match_status.drop(op.get_bind())
-    match_type.drop(op.get_bind())
-    
+    match_type = postgresql.ENUM('Exact', 'Deleted', 'Alternate',
+                                 'Partial', 'Mismatch', 'Unmatched',
+                                 'Other', name='match_type')
     op.drop_table('master')
     op.drop_table('summary')
+
+    match_status.drop(op.get_bind())
+    match_type.drop(op.get_bind())
+
     # ### end Alembic commands ###

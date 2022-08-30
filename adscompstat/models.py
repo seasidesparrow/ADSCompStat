@@ -13,11 +13,10 @@ Base = declarative_base()
 class CompStatMaster(Base):
     __tablename__ = 'master'
 
-    match_status = ENUM('Matched', 'Unmatched', 'NoIndex')
-    match_type = ENUM('Exact', 'Deleted', 'Alternate', 'Partial', 'Mismatch')
+    match_status = ENUM('Matched', 'Unmatched', 'NoIndex', name='match_status')
+    match_type = ENUM('Exact', 'Deleted', 'Alternate', 'Partial', 'Mismatch', 'Unmatched', 'Other', name='match_type')
 
     masterid = Column(Integer, primary_key=True, unique=True)
-    harvest_logfile = Column(String)
     harvest_filepath = Column(String, nullable=False)
     master_doi = Column(String, unique=True, nullable=False)
     issns = Column(Text, nullable=True)
@@ -34,12 +33,11 @@ class CompStatMaster(Base):
 
     def toJSON(self):
         return {'masterid': self.masterid,
-                'harvest_logfile': self.harvest_logfile,
                 'harvest_filepath': self.harvest_filepath,
                 'master_doi': self.master_doi,
                 'issns': self.issns,
                 'db_origin': self.db_origin,
-                'master_bibdata': self.master_bibdate,
+                'master_bibdata': self.master_bibdata,
                 'classic_match': self.classic_match,
                 'status': self.status,
                 'matchtype': self.matchtype,

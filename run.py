@@ -60,18 +60,15 @@ def main():
     try:
         args = get_arguments()
         logfiles = get_logs(args)
-    except Exception as err:
-        print('Completeness processing failed: %s' % err)
-    else:
         if not logfiles:
-            print('No logfiles, nothing to do. Stopping.')
+            # logger.warn("No logfiles, nothing to do. Stopping.")
+            print("No logfiles, nothing to do. Stopping.")
         else:
-            with open(OUTPUT_MAP_FILENAME, 'w') as fout:
-                for lf in logfiles:
-                    output = tasks.task_process_logfile(lf)
-                    for rec in output:
-                        fout.write("%s\n" % rec)
-
+            for lf in logfiles:
+                tasks.task_process_logfile.delay(lf)
+    except Exception as err:
+        # logger.warn("Completeness processing failed: %s" % err)
+        print("Completeness processing failed: %s" % err)
 
 if __name__ == '__main__':
     main()
