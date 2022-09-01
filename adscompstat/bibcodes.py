@@ -72,7 +72,7 @@ class BibcodeGenerator(object):
             page = page.replace(',', '')
             return page
         else:
-            return None
+            return '.'
 
     def _deletter_page(self, page):
         is_letter = None

@@ -94,7 +94,7 @@ def task_add_bibcode(processingRecord):
         record = processingRecord.get('record', None)
         bibcode = bibgen.make_bibcode(record)
     except Exception as err:
-        logger.warn("Failed to create bibcode for file %s: %s" % (sourceFile, err))
+        logger.warn("Failed to create bibcode: %s" % err)
         bibcode = None
     processingRecord['bibcode'] = bibcode
     task_match_record_to_classic.delay(processingRecord)
