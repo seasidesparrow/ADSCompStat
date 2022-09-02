@@ -61,15 +61,27 @@ def parse_one_meta_xml(filename):
 
 
 def simple_parse_one_meta_xml(filename):
+'''
+This just returns the DOI and ISSNs from the file.
+'''
     try:
         with open(filename,'r') as fx:
             data = fx.read()
             try:
                 parser = BaseBeautifulSoupParser()
                 record = parser.bsstrtodict(data)
+                doi = record.find("doi").get_text()
+                issn_all = record.find_all("issn")
+                issns = []
+                for i in issn_all:
+                    if i.get_text() and re_issn.match(i.get_text()):
+                        if i.has_attr("media_type"):
+                            issns.append((i["media_type"], i.get_text()))
+                        else:
+                            issns.append(("print", i.get_text()))
             except Exception as err:
                 raise BaseParseException(err)
-        return record
+        return (doi, issns)
     except Exception as err:
         raise ParseMetaXMLException(err)
 

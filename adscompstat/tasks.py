@@ -53,24 +53,29 @@ def task_write_result_to_db(inrec):
 def task_match_record_to_classic(processingRecord):
     allowedMatchType = ['Exact', 'Deleted', 'Alternate', 'Partial', 'Other']
     try:
-        recBibcode = processingRecord.get('bibcode', None)
-        master_doi = processingRecord.get('master_doi', None)
-        xmatchResult = xmatch.match(master_doi, recBibcode)
-        matchtype = xmatchResult.get('match', None)
-        harvest_filepath = processingRecord.get('harvest_filepath', None)
-        if matchtype in allowedMatchType:
-            status = 'Matched'
-        else:
-            status = 'Unmatched'
-        if matchtype == 'Classic Canonical Bibcode':
+        if processingRecord.get('record', None) == '':
+            status = 'NoIndex'
             matchtype = 'Other'
-        classic_match = xmatchResult.get('errs', None)
+            classic_match = {}
+        else:
+            recBibcode = processingRecord.get('bibcode', None)
+            master_doi = processingRecord.get('master_doi', None)
+            xmatchResult = xmatch.match(master_doi, recBibcode)
+            matchtype = xmatchResult.get('match', None)
+            harvest_filepath = processingRecord.get('harvest_filepath', None)
+            if matchtype in allowedMatchType:
+                status = 'Matched'
+            else:
+                status = 'Unmatched'
+            if matchtype == 'Classic Canonical Bibcode':
+                matchtype = 'Other'
+            classic_match = xmatchResult.get('errs', {})
         if type(classic_match) == dict:
             classic_match = json.dumps(classic_match)
-        issns = processingRecord.get('issns', None)
+        issns = processingRecord.get('issns', {})
         if type(issns) == dict:
             issns = json.dumps(issns)
-        master_bibdata = processingRecord.get('master_bibdata', None)
+        master_bibdata = processingRecord.get('master_bibdata', {})
         if type(master_bibdata) == dict:
             master_bibdata = json.dumps(master_bibdata)
     except Exception as err:
@@ -100,6 +105,18 @@ def task_add_bibcode(processingRecord):
     task_match_record_to_classic.delay(processingRecord)
 
 @app.task(queue='parse-meta')
+def task_add_empty_record(infile):
+    try:
+        (doi, issns) = utils.simple_parse_one_meta_xml(infile)
+        bib_data = {}
+        processingRecord = {'record': '',
+                            'harvest_filepath': infile,
+                            'master_doi': doi,
+                            'issns': json.dumps(issns),
+                            'master_bibdata': json.dumps(bib_data)}
+        task_add_bibcode.delay(processingRecord)
+
+@app.task(queue='parse-meta')
 def task_process_metafile(infile):
     try:
         record = utils.parse_one_meta_xml(infile)
@@ -123,7 +140,9 @@ def task_process_metafile(infile):
     except Exception as err:
         logger.info("Unable to process metafile %s, logging without bibdata" % infile)
         try:
-            task_
+            task_add_empty_record.delay(infile)
+        except Exception as err:
+            logger.info("Record %s failed, won't be written to db: %s" % (infile, err))
 #ADD ME
         # task_write_result_to_db({DOI, filename, 'NotIndexed'})
     else:
