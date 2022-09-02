@@ -44,11 +44,13 @@ def task_write_result_to_db(inrec):
                                 master_bibdata=inrec[3],
                                 classic_match=inrec[4],
                                 status=inrec[5],
-                                matchtype=inrec[6])
+                                matchtype=inrec[6],
+                                bibcode_meta=inrec[7],
+                                bibcode_canonical=inrec[8])
                 session.add(outrec)
                 session.commit()
             else:
-                logger.debug("Record for DOI %s exists already, ignoring for now." % checkdoi)
+                logger.info("Record for DOI %s exists already, ignoring for now." % checkdoi)
         except Exception as err:
             session.rollback()
             session.flush()
@@ -58,18 +60,17 @@ def task_write_result_to_db(inrec):
 def task_match_record_to_classic(processingRecord):
     allowedMatchType = ['Exact', 'Deleted', 'Alternate', 'Partial', 'Other', 'Mismatch']
     try:
+        harvest_filepath = processingRecord.get('harvest_filepath', None)
+        recBibcode = processingRecord.get('bibcode', None)
+        master_doi = processingRecord.get('master_doi', None)
         if processingRecord.get('record', None) == '':
-            harvest_filepath = processingRecord.get('harvest_filepath', None)
-            master_doi = processingRecord.get('master_doi', None)
             status = 'NoIndex'
             matchtype = 'Other'
             classic_match = {}
+            classic_bibcode = None
         else:
-            recBibcode = processingRecord.get('bibcode', None)
-            master_doi = processingRecord.get('master_doi', None)
             xmatchResult = xmatch.match(master_doi, recBibcode)
             matchtype = xmatchResult.get('match', None)
-            harvest_filepath = processingRecord.get('harvest_filepath', None)
             if matchtype in allowedMatchType:
                 status = 'Matched'
             else:
@@ -109,7 +110,7 @@ def task_add_bibcode(processingRecord):
         record = processingRecord.get('record', None)
         bibcode = bibgen.make_bibcode(record)
     except Exception as err:
-        logger.debug("Failed to create bibcode: %s" % err)
+        logger.info("Failed to create bibcode: %s" % err)
         bibcode = None
     processingRecord['bibcode'] = bibcode
     task_match_record_to_classic.delay(processingRecord)
@@ -150,7 +151,7 @@ def task_process_metafile(infile):
         if first_author:
             first_author = first_author[0]
     except Exception as err:
-        logger.debug("Unable to process metafile %s, logging without bibdata" % infile)
+        logger.info("Unable to process metafile %s, logging without bibdata" % infile)
         try:
             task_add_empty_record.delay(infile)
         except Exception as err:
