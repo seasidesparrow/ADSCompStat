@@ -50,7 +50,7 @@ def task_write_result_to_db(inrec):
                 session.add(outrec)
                 session.commit()
             else:
-                logger.info("Record for DOI %s exists already, ignoring for now." % checkdoi)
+                logger.debug("Record for DOI %s exists already, ignoring for now." % checkdoi)
         except Exception as err:
             session.rollback()
             session.flush()
@@ -110,7 +110,7 @@ def task_add_bibcode(processingRecord):
         record = processingRecord.get('record', None)
         bibcode = bibgen.make_bibcode(record)
     except Exception as err:
-        logger.info("Failed to create bibcode: %s" % err)
+        logger.debug("Failed to create bibcode: %s" % err)
         bibcode = None
     processingRecord['bibcode'] = bibcode
     task_match_record_to_classic.delay(processingRecord)
@@ -151,7 +151,7 @@ def task_process_metafile(infile):
         if first_author:
             first_author = first_author[0]
     except Exception as err:
-        logger.info("Unable to process metafile %s, logging without bibdata" % infile)
+        logger.debug("Unable to process metafile %s, logging without bibdata" % infile)
         try:
             task_add_empty_record.delay(infile)
         except Exception as err:
