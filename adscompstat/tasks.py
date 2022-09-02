@@ -121,7 +121,11 @@ def task_process_metafile(infile):
         if first_author:
             first_author = first_author[0]
     except Exception as err:
-        logger.warning("Unable to process metafile %s: %s" % (infile, err))
+        logger.info("Unable to process metafile %s, logging without bibdata" % infile)
+        try:
+            task_
+#ADD ME
+        # task_write_result_to_db({DOI, filename, 'NotIndexed'})
     else:
         bib_data = {'publication': publication,
                    'pagination': pagination,

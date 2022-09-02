@@ -1,5 +1,7 @@
+from bs4 import BeautifulSoup
 from adscompstat.exceptions import *
 from adsingestp.parsers.crossref import CrossrefParser
+from adsingestp.parsers.base import BaseBeautifulSoupParser
 from glob import glob
 
 
@@ -53,6 +55,20 @@ def parse_one_meta_xml(filename):
                 record = parser.parse(data)
             except Exception as err:
                 raise CrossRefParseException(err)
+        return record
+    except Exception as err:
+        raise ParseMetaXMLException(err)
+
+
+def simple_parse_one_meta_xml(filename):
+    try:
+        with open(filename,'r') as fx:
+            data = fx.read()
+            try:
+                parser = BaseBeautifulSoupParser()
+                record = parser.bsstrtodict(data)
+            except Exception as err:
+                raise BaseParseException(err)
         return record
     except Exception as err:
         raise ParseMetaXMLException(err)

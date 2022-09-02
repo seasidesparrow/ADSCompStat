@@ -22,6 +22,10 @@ class CrossRefParseException(Exception):
     pass
 
 
+class BaseParseException(Exception):
+    pass
+
+
 class LoadClassicDataException(Exception):
     pass
 
