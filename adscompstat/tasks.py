@@ -34,16 +34,21 @@ except Exception as err:
 def task_write_result_to_db(inrec):
     with app.session_scope() as session:
         try:
-            outrec = master(harvest_filepath=inrec[0],
-                            master_doi=inrec[1],
-                            issns=inrec[2],
-                            db_origin='Crossref',
-                            master_bibdata=inrec[3],
-                            classic_match=inrec[4],
-                            status=inrec[5],
-                            matchtype=inrec[6])
-            session.add(outrec)
-            session.commit()
+            checkdoi = inrec[1]
+            result = session.query(master).filter(master_doi==checkdoi).all()
+            if not result:
+                outrec = master(harvest_filepath=inrec[0],
+                                master_doi=inrec[1],
+                                issns=inrec[2],
+                                db_origin='Crossref',
+                                master_bibdata=inrec[3],
+                                classic_match=inrec[4],
+                                status=inrec[5],
+                                matchtype=inrec[6])
+                session.add(outrec)
+                session.commit()
+            else:
+                logger.info("Record for DOI %s exists already, ignoring for now." % checkdoi)
         except Exception as err:
             session.rollback()
             session.flush()
