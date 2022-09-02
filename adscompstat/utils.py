@@ -61,9 +61,6 @@ def parse_one_meta_xml(filename):
 
 
 def simple_parse_one_meta_xml(filename):
-'''
-This just returns the DOI and ISSNs from the file.
-'''
     try:
         with open(filename,'r') as fx:
             data = fx.read()
