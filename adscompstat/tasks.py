@@ -47,7 +47,7 @@ def task_write_result_to_db(inrec):
         except Exception as err:
             session.rollback()
             session.flush()
-            logger.error("Problem with database commit: %s" % err)
+            logger.warning("Problem with database commit: %s" % err)
 
 @app.task(queue='match-classic')
 def task_match_record_to_classic(processingRecord):
@@ -79,7 +79,7 @@ def task_match_record_to_classic(processingRecord):
         if type(master_bibdata) == dict:
             master_bibdata = json.dumps(master_bibdata)
     except Exception as err:
-        logger.warn("Error matching record: %s" % err)
+        logger.warning("Error matching record: %s" % err)
     else:
         try:
             outputRecord = (harvest_filepath,
@@ -91,7 +91,7 @@ def task_match_record_to_classic(processingRecord):
                             matchtype)
             task_write_result_to_db.delay(outputRecord)
         except Exception as err:
-            logger.warn("Error creating a models record: %s" % err)
+            logger.warning("Error creating a master record: %s" % err)
 
 @app.task(queue='add-bibcode')
 def task_add_bibcode(processingRecord):
@@ -99,7 +99,7 @@ def task_add_bibcode(processingRecord):
         record = processingRecord.get('record', None)
         bibcode = bibgen.make_bibcode(record)
     except Exception as err:
-        logger.warn("Failed to create bibcode: %s" % err)
+        logger.info("Failed to create bibcode: %s" % err)
         bibcode = None
     processingRecord['bibcode'] = bibcode
     task_match_record_to_classic.delay(processingRecord)
@@ -136,15 +136,15 @@ def task_process_metafile(infile):
                 if pid.get('DOI', None):
                     doi = pid.get('DOI', None)
         if not doi:
-            logger.warning("I did not get a DOI!")
+            logger.error("Unable to extract DOI from record: %s" % infile)
         if first_author:
             first_author = first_author[0]
     except Exception as err:
-        logger.info("Unable to process metafile %s, logging without bibdata" % infile)
+        logger.debug("Unable to process metafile %s, logging without bibdata" % infile)
         try:
             task_add_empty_record.delay(infile)
         except Exception as err:
-            logger.info("Record %s failed, won't be written to db: %s" % (infile, err))
+            logger.warning("Record %s failed, won't be written to db: %s" % (infile, err))
 #ADD ME
         # task_write_result_to_db({DOI, filename, 'NotIndexed'})
     else:
@@ -168,4 +168,4 @@ def task_process_logfile(infile):
             xmlFile = app.conf.get('HARVEST_BASE_DIR', '/') + xmlFile
             task_process_metafile.delay(xmlFile)
     except Exception as err:
-        logger.warn("error processing logfile %s: %s" % (infile, err))
+        logger.error("Error processing logfile %s: %s" % (infile, err))
