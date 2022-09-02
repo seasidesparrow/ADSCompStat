@@ -55,6 +55,7 @@ def task_match_record_to_classic(processingRecord):
     try:
         if processingRecord.get('record', None) == '':
             harvest_filepath = processingRecord.get('harvest_filepath', None)
+            master_doi = processingRecord.get('master_doi', None)
             status = 'NoIndex'
             matchtype = 'Other'
             classic_match = {}
