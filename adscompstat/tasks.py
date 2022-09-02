@@ -46,7 +46,7 @@ def task_write_result_to_db(inrec):
                                 status=inrec[5],
                                 matchtype=inrec[6],
                                 bibcode_meta=inrec[7],
-                                bibcode_canonical=inrec[8])
+                                bibcode_classic=inrec[8])
                 session.add(outrec)
                 session.commit()
             else:
