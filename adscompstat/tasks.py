@@ -48,7 +48,7 @@ def task_write_result_to_db(inrec):
                 session.add(outrec)
                 session.commit()
             else:
-                logger.info("Record for DOI %s exists already, ignoring for now." % checkdoi)
+                logger.debug("Record for DOI %s exists already, ignoring for now." % checkdoi)
         except Exception as err:
             session.rollback()
             session.flush()
