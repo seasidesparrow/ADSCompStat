@@ -1,8 +1,11 @@
+import re
 from bs4 import BeautifulSoup
 from adscompstat.exceptions import *
 from adsingestp.parsers.crossref import CrossrefParser
 from adsingestp.parsers.base import BaseBeautifulSoupParser
 from glob import glob
+
+re_issn = re.compile(r"^\d{4}-?\d{3}[0-9X]$")
 
 
 def get_updateagent_logs(logdir):
