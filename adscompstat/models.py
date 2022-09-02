@@ -25,6 +25,8 @@ class CompStatMaster(Base):
     classic_match = Column(Text, nullable=True)
     status = Column(match_status, nullable=False)
     matchtype = Column(match_type, nullable=False)
+    bibcode_meta = Column(String, nullable=True)
+    bibcode_classic = Column(String, nullable=True)
     created = Column(UTCDateTime, default=get_date)
     updated = Column(UTCDateTime, onupdate=get_date)
 
@@ -41,6 +43,8 @@ class CompStatMaster(Base):
                 'classic_match': self.classic_match,
                 'status': self.status,
                 'matchtype': self.matchtype,
+                'bibcode_meta': self.bibcode_meta,
+                'bibcode_classic': self.bibcode_classic,
                 'updated': self.updated}
 
 

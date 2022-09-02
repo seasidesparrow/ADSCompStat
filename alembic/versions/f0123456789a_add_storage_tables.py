@@ -42,6 +42,8 @@ def upgrade():
                                                            'Other',
                                                            name='match_type'),
                               nullable=False),
+                    sa.Column('bibcode_meta', sa.String(), nullable=True),
+                    sa.Column('bibcode_classic', sa.String(), nullable=True),
                     sa.Column('created', UTCDateTime, nullable=True,
                               default=get_date),
                     sa.Column('updated', UTCDateTime, nullable=True,
