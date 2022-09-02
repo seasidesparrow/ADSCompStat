@@ -34,49 +34,61 @@ except Exception as err:
 def task_write_result_to_db(inrec):
     with app.session_scope() as session:
         try:
-            outrec = master(harvest_filepath=inrec[0],
-                            master_doi=inrec[1],
-                            issns=inrec[2],
-                            db_origin='Crossref',
-                            master_bibdata=inrec[3],
-                            classic_match=inrec[4],
-                            status=inrec[5],
-                            matchtype=inrec[6])
-            session.add(outrec)
-            session.commit()
+            checkdoi = inrec[1]
+            result = session.query(master.master_doi).filter_by(master_doi=checkdoi).all()
+            if not result:
+                outrec = master(harvest_filepath=inrec[0],
+                                master_doi=inrec[1],
+                                issns=inrec[2],
+                                db_origin='Crossref',
+                                master_bibdata=inrec[3],
+                                classic_match=inrec[4],
+                                status=inrec[5],
+                                matchtype=inrec[6])
+                session.add(outrec)
+                session.commit()
+            else:
+                logger.debug("Record for DOI %s exists already, ignoring for now." % checkdoi)
         except Exception as err:
             session.rollback()
             session.flush()
-            logger.error("Problem with database commit: %s" % err)
+            logger.warning("Problem with database commit: %s" % err)
 
 @app.task(queue='match-classic')
 def task_match_record_to_classic(processingRecord):
     allowedMatchType = ['Exact', 'Deleted', 'Alternate', 'Partial', 'Other']
     try:
-        recBibcode = processingRecord.get('bibcode', None)
-        master_doi = processingRecord.get('master_doi', None)
-        xmatchResult = xmatch.match(master_doi, recBibcode)
-        matchtype = xmatchResult.get('match', None)
-        harvest_filepath = processingRecord.get('harvest_filepath', None)
-        if matchtype in allowedMatchType:
-            status = 'Matched'
-        else:
-            status = 'Unmatched'
-        if matchtype == 'Classic Canonical Bibcode':
+        if processingRecord.get('record', None) == '':
+            harvest_filepath = processingRecord.get('harvest_filepath', None)
+            master_doi = processingRecord.get('master_doi', None)
+            status = 'NoIndex'
             matchtype = 'Other'
-        classic_match = xmatchResult.get('errs', None)
-        if type(classic_match) == dict:
-            classic_match = json.dumps(classic_match)
-        issns = processingRecord.get('issns', None)
-        if type(issns) == dict:
-            issns = json.dumps(issns)
-        master_bibdata = processingRecord.get('master_bibdata', None)
-        if type(master_bibdata) == dict:
-            master_bibdata = json.dumps(master_bibdata)
+            classic_match = {}
+        else:
+            recBibcode = processingRecord.get('bibcode', None)
+            master_doi = processingRecord.get('master_doi', None)
+            xmatchResult = xmatch.match(master_doi, recBibcode)
+            matchtype = xmatchResult.get('match', None)
+            harvest_filepath = processingRecord.get('harvest_filepath', None)
+            if matchtype in allowedMatchType:
+                status = 'Matched'
+            else:
+                status = 'Unmatched'
+            if matchtype == 'Classic Canonical Bibcode':
+                matchtype = 'Other'
+            classic_match = xmatchResult.get('errs', {})
     except Exception as err:
-        logger.warn("Error matching record: %s" % err)
+        logger.warning("Error matching record: %s" % err)
     else:
         try:
+            if type(classic_match) == dict:
+                classic_match = json.dumps(classic_match)
+            issns = processingRecord.get('issns', {})
+            if type(issns) == dict:
+                issns = json.dumps(issns)
+            master_bibdata = processingRecord.get('master_bibdata', {})
+            if type(master_bibdata) == dict:
+                master_bibdata = json.dumps(master_bibdata)
             outputRecord = (harvest_filepath,
                             master_doi,
                             issns,
@@ -86,7 +98,7 @@ def task_match_record_to_classic(processingRecord):
                             matchtype)
             task_write_result_to_db.delay(outputRecord)
         except Exception as err:
-            logger.warn("Error creating a models record: %s" % err)
+            logger.warning("Error creating a master record: %s" % err)
 
 @app.task(queue='add-bibcode')
 def task_add_bibcode(processingRecord):
@@ -94,10 +106,24 @@ def task_add_bibcode(processingRecord):
         record = processingRecord.get('record', None)
         bibcode = bibgen.make_bibcode(record)
     except Exception as err:
-        logger.warn("Failed to create bibcode for file %s: %s" % (sourceFile, err))
+        logger.debug("Failed to create bibcode: %s" % err)
         bibcode = None
     processingRecord['bibcode'] = bibcode
     task_match_record_to_classic.delay(processingRecord)
+
+@app.task(queue='parse-meta')
+def task_add_empty_record(infile):
+    try:
+        (doi, issns) = utils.simple_parse_one_meta_xml(infile)
+        bib_data = {}
+        processingRecord = {'record': '',
+                            'harvest_filepath': infile,
+                            'master_doi': doi,
+                            'issns': json.dumps(issns),
+                            'master_bibdata': json.dumps(bib_data)}
+        task_add_bibcode.delay(processingRecord)
+    except Exception as err:
+        raise EmptyRecordException(err)
 
 @app.task(queue='parse-meta')
 def task_process_metafile(infile):
@@ -117,11 +143,17 @@ def task_process_metafile(infile):
                 if pid.get('DOI', None):
                     doi = pid.get('DOI', None)
         if not doi:
-            logger.warning("I did not get a DOI!")
+            logger.error("Unable to extract DOI from record: %s" % infile)
         if first_author:
             first_author = first_author[0]
     except Exception as err:
-        logger.warning("Unable to process metafile %s: %s" % (infile, err))
+        logger.debug("Unable to process metafile %s, logging without bibdata" % infile)
+        try:
+            task_add_empty_record.delay(infile)
+        except Exception as err:
+            logger.warning("Record %s failed, won't be written to db: %s" % (infile, err))
+#ADD ME
+        # task_write_result_to_db({DOI, filename, 'NotIndexed'})
     else:
         bib_data = {'publication': publication,
                    'pagination': pagination,
@@ -143,4 +175,4 @@ def task_process_logfile(infile):
             xmlFile = app.conf.get('HARVEST_BASE_DIR', '/') + xmlFile
             task_process_metafile.delay(xmlFile)
     except Exception as err:
-        logger.warn("error processing logfile %s: %s" % (infile, err))
+        logger.error("Error processing logfile %s: %s" % (infile, err))

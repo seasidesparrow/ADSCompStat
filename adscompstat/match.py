@@ -42,7 +42,7 @@ class CrossrefMatcher(object):
                     errs['init'] = classicInit
                 returnDict['errs'] = errs
             else:
-                returnDict['match'] = 'Mismatched'
+                returnDict['match'] = 'Mismatch'
                 returnDict['errs'] = {'bibcode': classicBibcode}
         except Exception as err:
             return

@@ -45,7 +45,7 @@ class BibcodeGenerator(object):
             volume = record['publication']['volumeNum']
             volume = volume
         except Exception as err:
-            volume = None
+            volume = '.'
         return volume
 
     def _get_issue(self, record):
@@ -68,11 +68,11 @@ class BibcodeGenerator(object):
             elif rpage:
                 page = rpage
             else:
-                page = None
+                page = '.'
             page = page.replace(',', '')
             return page
         else:
-            return None
+            return '.'
 
     def _deletter_page(self, page):
         is_letter = None

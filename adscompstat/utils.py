@@ -1,6 +1,11 @@
+import re
+from bs4 import BeautifulSoup
 from adscompstat.exceptions import *
 from adsingestp.parsers.crossref import CrossrefParser
+from adsingestp.parsers.base import BaseBeautifulSoupParser
 from glob import glob
+
+re_issn = re.compile(r"^\d{4}-?\d{3}[0-9X]$")
 
 
 def get_updateagent_logs(logdir):
@@ -54,6 +59,29 @@ def parse_one_meta_xml(filename):
             except Exception as err:
                 raise CrossRefParseException(err)
         return record
+    except Exception as err:
+        raise ParseMetaXMLException(err)
+
+
+def simple_parse_one_meta_xml(filename):
+    try:
+        with open(filename,'r') as fx:
+            data = fx.read()
+            try:
+                parser = BaseBeautifulSoupParser()
+                record = parser.bsstrtodict(data)
+                doi = record.find("doi").get_text()
+                issn_all = record.find_all("issn")
+                issns = []
+                for i in issn_all:
+                    if i.get_text() and re_issn.match(i.get_text()):
+                        if i.has_attr("media_type"):
+                            issns.append((i["media_type"], i.get_text()))
+                        else:
+                            issns.append(("print", i.get_text()))
+            except Exception as err:
+                raise BaseParseException(err)
+        return (doi, issns)
     except Exception as err:
         raise ParseMetaXMLException(err)
 
