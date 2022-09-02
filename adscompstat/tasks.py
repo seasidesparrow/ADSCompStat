@@ -35,7 +35,7 @@ def task_write_result_to_db(inrec):
     with app.session_scope() as session:
         try:
             checkdoi = inrec[1]
-            result = session.query(master).filter(master_doi==checkdoi).all()
+            result = session.query(master.master_doi).filter_by(master_doi=checkdoi).all()
             if not result:
                 outrec = master(harvest_filepath=inrec[0],
                                 master_doi=inrec[1],
