@@ -26,6 +26,10 @@ class BaseParseException(Exception):
     pass
 
 
+class EmptyRecordException(Exception):
+    pass
+
+
 class LoadClassicDataException(Exception):
     pass
 

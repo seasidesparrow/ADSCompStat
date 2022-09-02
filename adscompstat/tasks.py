@@ -115,6 +115,8 @@ def task_add_empty_record(infile):
                             'issns': json.dumps(issns),
                             'master_bibdata': json.dumps(bib_data)}
         task_add_bibcode.delay(processingRecord)
+    except Exception as err:
+        raise EmptyRecordException(err)
 
 @app.task(queue='parse-meta')
 def task_process_metafile(infile):
