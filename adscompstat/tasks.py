@@ -54,6 +54,7 @@ def task_match_record_to_classic(processingRecord):
     allowedMatchType = ['Exact', 'Deleted', 'Alternate', 'Partial', 'Other']
     try:
         if processingRecord.get('record', None) == '':
+            harvest_filepath = processingRecord.get('harvest_filepath', None)
             status = 'NoIndex'
             matchtype = 'Other'
             classic_match = {}
@@ -70,18 +71,18 @@ def task_match_record_to_classic(processingRecord):
             if matchtype == 'Classic Canonical Bibcode':
                 matchtype = 'Other'
             classic_match = xmatchResult.get('errs', {})
-        if type(classic_match) == dict:
-            classic_match = json.dumps(classic_match)
-        issns = processingRecord.get('issns', {})
-        if type(issns) == dict:
-            issns = json.dumps(issns)
-        master_bibdata = processingRecord.get('master_bibdata', {})
-        if type(master_bibdata) == dict:
-            master_bibdata = json.dumps(master_bibdata)
     except Exception as err:
         logger.warning("Error matching record: %s" % err)
     else:
         try:
+            if type(classic_match) == dict:
+                classic_match = json.dumps(classic_match)
+            issns = processingRecord.get('issns', {})
+            if type(issns) == dict:
+                issns = json.dumps(issns)
+            master_bibdata = processingRecord.get('master_bibdata', {})
+            if type(master_bibdata) == dict:
+                master_bibdata = json.dumps(master_bibdata)
             outputRecord = (harvest_filepath,
                             master_doi,
                             issns,
@@ -99,7 +100,7 @@ def task_add_bibcode(processingRecord):
         record = processingRecord.get('record', None)
         bibcode = bibgen.make_bibcode(record)
     except Exception as err:
-        logger.info("Failed to create bibcode: %s" % err)
+        logger.debug("Failed to create bibcode: %s" % err)
         bibcode = None
     processingRecord['bibcode'] = bibcode
     task_match_record_to_classic.delay(processingRecord)
