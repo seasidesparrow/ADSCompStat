@@ -92,11 +92,11 @@ class CrossrefMatcher(object):
                     if checkDoiList:
                         if xrefDOI not in checkDoiList:
                             result['match'] = 'Other'
-                            result['bibcode'] = None
+                            result['bibcode'] = xrefBibcode
                             result['errs'] = {'DOI': 'Classic DOI is different.'}
                     else:
                         result['match'] = 'Other'
-                        result['bibcode'] = None
+                        result['bibcode'] = xrefBibcode
                         result['errs'] = {'DOI': 'Not in classic.' }
                 else:
                     result['match'] = 'Unmatched'
