@@ -44,7 +44,9 @@ def task_write_result_to_db(inrec):
                                 master_bibdata=inrec[3],
                                 classic_match=inrec[4],
                                 status=inrec[5],
-                                matchtype=inrec[6])
+                                matchtype=inrec[6],
+                                bibcode_meta=inrec[7],
+                                bibcode_classic=inrec[8])
                 session.add(outrec)
                 session.commit()
             else:
@@ -56,20 +58,19 @@ def task_write_result_to_db(inrec):
 
 @app.task(queue='match-classic')
 def task_match_record_to_classic(processingRecord):
-    allowedMatchType = ['Exact', 'Deleted', 'Alternate', 'Partial', 'Other']
+    allowedMatchType = ['Exact', 'Deleted', 'Alternate', 'Partial', 'Other', 'Mismatch']
     try:
+        harvest_filepath = processingRecord.get('harvest_filepath', None)
+        recBibcode = processingRecord.get('bibcode', None)
+        master_doi = processingRecord.get('master_doi', None)
         if processingRecord.get('record', None) == '':
-            harvest_filepath = processingRecord.get('harvest_filepath', None)
-            master_doi = processingRecord.get('master_doi', None)
             status = 'NoIndex'
             matchtype = 'Other'
             classic_match = {}
+            classic_bibcode = None
         else:
-            recBibcode = processingRecord.get('bibcode', None)
-            master_doi = processingRecord.get('master_doi', None)
             xmatchResult = xmatch.match(master_doi, recBibcode)
             matchtype = xmatchResult.get('match', None)
-            harvest_filepath = processingRecord.get('harvest_filepath', None)
             if matchtype in allowedMatchType:
                 status = 'Matched'
             else:
@@ -77,6 +78,7 @@ def task_match_record_to_classic(processingRecord):
             if matchtype == 'Classic Canonical Bibcode':
                 matchtype = 'Other'
             classic_match = xmatchResult.get('errs', {})
+            classic_bibcode = xmatchResult.get('bibcode', None)
     except Exception as err:
         logger.warning("Error matching record: %s" % err)
     else:
@@ -96,7 +98,9 @@ def task_match_record_to_classic(processingRecord):
                             master_bibdata,
                             classic_match,
                             status,
-                            matchtype)
+                            matchtype,
+                            recBibcode,
+                            classic_bibcode)
             task_write_result_to_db.delay(outputRecord)
         except Exception as err:
             logger.warning("Error creating a master record: %s" % err)
