@@ -84,6 +84,7 @@ def task_match_record_to_classic(processingRecord):
             if type(classic_match) == dict:
                 classic_match = json.dumps(classic_match)
             issns = processingRecord.get('issns', {})
+            logger.warn('issns: %s: %s' % (type(issns), json.dumps(issns)))
             if type(issns) == dict:
                 issns = json.dumps(issns)
             master_bibdata = processingRecord.get('master_bibdata', {})
