@@ -86,7 +86,6 @@ def task_match_record_to_classic(processingRecord):
             if type(classic_match) == dict:
                 classic_match = json.dumps(classic_match)
             issns = processingRecord.get('issns', {})
-            logger.warn('issns: %s: %s' % (type(issns), json.dumps(issns)))
             if type(issns) == dict:
                 issns = json.dumps(issns)
             master_bibdata = processingRecord.get('master_bibdata', {})
@@ -120,12 +119,18 @@ def task_add_bibcode(processingRecord):
 def task_add_empty_record(infile):
     try:
         (doi, issns) = utils.simple_parse_one_meta_xml(infile)
+        issn_dict={}
+        if issns:
+            for item in issns:
+                k = item['pubtype']
+                v = item['issnString']
+                issn_dict[k] = v
         bib_data = {}
         processingRecord = {'record': '',
                             'harvest_filepath': infile,
                             'master_doi': doi,
-                            'issns': json.dumps(issns),
-                            'master_bibdata': json.dumps(bib_data)}
+                            'issns': issn_dict,
+                            'master_bibdata': bib_data}
         task_add_bibcode.delay(processingRecord)
     except Exception as err:
         raise EmptyRecordException(err)
@@ -142,6 +147,12 @@ def task_process_metafile(infile):
         if publication:
             pub_year = publication.get('pubYear', None)
             issns = publication.get('ISSN', None)
+            issn_dict={}
+            if issns:
+                for item in issns:
+                    k = item['pubtype']
+                    v = item['issnString']
+                    issn_dict[k] = v
         if pids:
             doi = None
             for pid in pids:
@@ -168,8 +179,8 @@ def task_process_metafile(infile):
         processingRecord = {'record': record,
                             'harvest_filepath': infile,
                             'master_doi': doi,
-                            'issns': json.dumps(issns),
-                            'master_bibdata': json.dumps(bib_data)}
+                            'issns': issn_dict,
+                            'master_bibdata': bib_data}
         task_add_bibcode.delay(processingRecord)
 
 @app.task(queue='get-logfiles')
