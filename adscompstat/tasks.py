@@ -139,7 +139,7 @@ def task_add_empty_record(infile):
                             'master_bibdata': bib_data}
         task_add_bibcode.delay(processingRecord)
     except Exception as err:
-        logger.warning("Can't add empty record for %s: %s" % (infile,err))
+        logger.warning("Can't add empty record for %s: %s" % (infile, err))
 
 @app.task(queue='parse-meta')
 def task_process_metafile(infile):
