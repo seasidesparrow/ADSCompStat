@@ -82,7 +82,7 @@ def task_match_record_to_classic(processingRecord):
                 classic_bibcode = xmatchResult.get('bibcode', None)
             else:
                 status='NoIndex'
-                matchtype = None
+                matchtype = 'Other'
                 classic_match = {}
                 classic_bibcode = None
     except Exception as err:
