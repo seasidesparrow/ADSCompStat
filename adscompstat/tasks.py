@@ -54,7 +54,7 @@ def task_write_result_to_db(inrec):
         except Exception as err:
             session.rollback()
             session.flush()
-            logger.warning("Problem with database commit: %s" % err)
+            logger.debug("Problem with database commit: %s" % err)
 
 @app.task(queue='match-classic')
 def task_match_record_to_classic(processingRecord):
