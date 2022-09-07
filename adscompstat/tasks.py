@@ -70,6 +70,20 @@ def task_match_record_to_classic(processingRecord):
             classic_bibcode = None
         else:
             xmatchResult = xmatch.match(master_doi, recBibcode)
+            if xmatchResult:
+                matchtype = xmatchResult.get('match', None)
+                if matchtype in allowedMatchType:
+                    status = 'Matched'
+                else:
+                    status = 'Unmatched'
+                if matchtype == 'Classic Canonical Bibcode':
+                    matchtype = 'Other'
+                classic_match = xmatchResult.get('errs', {})
+                classic_bibcode = xmatchResult.get('bibcode', None)
+            else:
+                status='NoIndex'
+                classic_match = {}
+                classic_bibcode = None
             matchtype = xmatchResult.get('match', None)
             if matchtype in allowedMatchType:
                 status = 'Matched'
