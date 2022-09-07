@@ -82,17 +82,9 @@ def task_match_record_to_classic(processingRecord):
                 classic_bibcode = xmatchResult.get('bibcode', None)
             else:
                 status='NoIndex'
+                matchtype = None
                 classic_match = {}
                 classic_bibcode = None
-            matchtype = xmatchResult.get('match', None)
-            if matchtype in allowedMatchType:
-                status = 'Matched'
-            else:
-                status = 'Unmatched'
-            if matchtype == 'Classic Canonical Bibcode':
-                matchtype = 'Other'
-            classic_match = xmatchResult.get('errs', {})
-            classic_bibcode = xmatchResult.get('bibcode', None)
     except Exception as err:
         logger.warning("Error matching record: %s" % err)
     else:
