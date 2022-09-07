@@ -122,8 +122,8 @@ def task_add_empty_record(infile):
         issn_dict={}
         if issns:
             for item in issns:
-                k = item['pubtype']
-                v = item['issnString']
+                k = item[0]
+                v = item[1]
                 issn_dict[k] = v
         bib_data = {}
         processingRecord = {'record': '',
