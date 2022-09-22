@@ -5,7 +5,7 @@ from adscompstat.models import CompStatMaster as master
 from adscompstat.models import CompStatSummary as summary
 from adscompstat import app as app_module
 from adscompstat import utils
-from adscompstat.bibcodes import BibcodeGenerator
+from adsenrich.bibcodes import BibcodeGenerator
 from adscompstat.match import CrossrefMatcher
 from adscompstat.exceptions import *
 
@@ -23,10 +23,8 @@ app.conf.CELERY_QUEUES = (
 )
 
 try:
-    i2b = app.conf.get('ISSN2BIBSTEM', None)
-    n2b = app.conf.get('NAME2BIBSTEM', None)
     xmatch = CrossrefMatcher()
-    bibgen = BibcodeGenerator(issn2bibstem=i2b, name2bibstem=n2b)
+    bibgen = BibcodeGenerator()
 except Exception as err:
     raise NoDataHandlerException(err)
 
