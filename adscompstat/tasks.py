@@ -5,7 +5,7 @@ from adscompstat.models import CompStatMaster as master
 from adscompstat.models import CompStatSummary as summary
 from adscompstat import app as app_module
 from adscompstat import utils
-from adscompstat.bibcodes import BibcodeGenerator
+from adsenrich.bibcodes import BibcodeGenerator
 from adscompstat.match import CrossrefMatcher
 from adscompstat.exceptions import *
 
@@ -23,10 +23,8 @@ app.conf.CELERY_QUEUES = (
 )
 
 try:
-    i2b = app.conf.get('ISSN2BIBSTEM', None)
-    n2b = app.conf.get('NAME2BIBSTEM', None)
     xmatch = CrossrefMatcher()
-    bibgen = BibcodeGenerator(issn2bibstem=i2b, name2bibstem=n2b)
+    bibgen = BibcodeGenerator()
 except Exception as err:
     raise NoDataHandlerException(err)
 
@@ -44,7 +42,9 @@ def task_write_result_to_db(inrec):
                                 master_bibdata=inrec[3],
                                 classic_match=inrec[4],
                                 status=inrec[5],
-                                matchtype=inrec[6])
+                                matchtype=inrec[6],
+                                bibcode_meta=inrec[7],
+                                bibcode_classic=inrec[8])
                 session.add(outrec)
                 session.commit()
             else:
@@ -52,31 +52,37 @@ def task_write_result_to_db(inrec):
         except Exception as err:
             session.rollback()
             session.flush()
-            logger.warning("Problem with database commit: %s" % err)
+            logger.debug("Problem with database commit: %s" % err)
 
 @app.task(queue='match-classic')
 def task_match_record_to_classic(processingRecord):
-    allowedMatchType = ['Exact', 'Deleted', 'Alternate', 'Partial', 'Other']
+    allowedMatchType = ['Exact', 'Deleted', 'Alternate', 'Partial', 'Other', 'Mismatch']
     try:
+        harvest_filepath = processingRecord.get('harvest_filepath', None)
+        recBibcode = processingRecord.get('bibcode', None)
+        master_doi = processingRecord.get('master_doi', None)
         if processingRecord.get('record', None) == '':
-            harvest_filepath = processingRecord.get('harvest_filepath', None)
-            master_doi = processingRecord.get('master_doi', None)
             status = 'NoIndex'
             matchtype = 'Other'
             classic_match = {}
+            classic_bibcode = None
         else:
-            recBibcode = processingRecord.get('bibcode', None)
-            master_doi = processingRecord.get('master_doi', None)
             xmatchResult = xmatch.match(master_doi, recBibcode)
-            matchtype = xmatchResult.get('match', None)
-            harvest_filepath = processingRecord.get('harvest_filepath', None)
-            if matchtype in allowedMatchType:
-                status = 'Matched'
+            if xmatchResult:
+                matchtype = xmatchResult.get('match', None)
+                if matchtype in allowedMatchType:
+                    status = 'Matched'
+                else:
+                    status = 'Unmatched'
+                if matchtype == 'Classic Canonical Bibcode':
+                    matchtype = 'Other'
+                classic_match = xmatchResult.get('errs', {})
+                classic_bibcode = xmatchResult.get('bibcode', None)
             else:
-                status = 'Unmatched'
-            if matchtype == 'Classic Canonical Bibcode':
+                status='NoIndex'
                 matchtype = 'Other'
-            classic_match = xmatchResult.get('errs', {})
+                classic_match = {}
+                classic_bibcode = None
     except Exception as err:
         logger.warning("Error matching record: %s" % err)
     else:
@@ -95,7 +101,9 @@ def task_match_record_to_classic(processingRecord):
                             master_bibdata,
                             classic_match,
                             status,
-                            matchtype)
+                            matchtype,
+                            recBibcode,
+                            classic_bibcode)
             task_write_result_to_db.delay(outputRecord)
         except Exception as err:
             logger.warning("Error creating a master record: %s" % err)
@@ -115,15 +123,21 @@ def task_add_bibcode(processingRecord):
 def task_add_empty_record(infile):
     try:
         (doi, issns) = utils.simple_parse_one_meta_xml(infile)
+        issn_dict={}
+        if issns:
+            for item in issns:
+                k = item[0]
+                v = item[1]
+                issn_dict[k] = v
         bib_data = {}
         processingRecord = {'record': '',
                             'harvest_filepath': infile,
                             'master_doi': doi,
-                            'issns': json.dumps(issns),
-                            'master_bibdata': json.dumps(bib_data)}
+                            'issns': issn_dict,
+                            'master_bibdata': bib_data}
         task_add_bibcode.delay(processingRecord)
     except Exception as err:
-        raise EmptyRecordException(err)
+        logger.warning("Can't add empty record for %s: %s" % (infile, err))
 
 @app.task(queue='parse-meta')
 def task_process_metafile(infile):
@@ -137,6 +151,12 @@ def task_process_metafile(infile):
         if publication:
             pub_year = publication.get('pubYear', None)
             issns = publication.get('ISSN', None)
+            issn_dict={}
+            if issns:
+                for item in issns:
+                    k = item['pubtype']
+                    v = item['issnString']
+                    issn_dict[k] = v
         if pids:
             doi = None
             for pid in pids:
@@ -163,8 +183,8 @@ def task_process_metafile(infile):
         processingRecord = {'record': record,
                             'harvest_filepath': infile,
                             'master_doi': doi,
-                            'issns': json.dumps(issns),
-                            'master_bibdata': json.dumps(bib_data)}
+                            'issns': issn_dict,
+                            'master_bibdata': bib_data}
         task_add_bibcode.delay(processingRecord)
 
 @app.task(queue='get-logfiles')
