@@ -1,4 +1,4 @@
-HARVEST_BASE_DIR = '/proj/adsx/ads_completeness/'
+HARVEST_BASE_DIR = '/proj/adsx/ads_completeness/Crossref2/'
 
 HARVEST_LOG_DIR = HARVEST_BASE_DIR + '/UpdateAgent/'
 
