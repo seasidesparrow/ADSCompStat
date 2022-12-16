@@ -3,7 +3,6 @@ from adscompstat import tasks
 from adscompstat.exceptions import GetLogException
 from config import *
 import argparse
-import json
 
 def get_arguments():
     parser = argparse.ArgumentParser(description='Command line options.')
@@ -21,6 +20,26 @@ def get_arguments():
                         action='store_true',
                         default=False,
                         help='Do only records from the most recent harvest')
+
+    parser.add_argument('-c',
+                        '--classic',
+                        dest='do_load_classic',
+                        action='store_true',
+                        default=False,
+                        help='Load bibstem/bibcode/doi/issn data from classic and journalsdb')
+    parser.add_argument('-m',
+                        '--completeness',
+                        dest='do_completeness',
+                        action='store_true',
+                        default=False,
+                        help='Calculate completeness summary for all harvested bibstems')
+    parser.add_argument('-j',
+                        '--json',
+                        dest='do_json_export',
+                        action='store_true',
+                        default=False,
+                        help='Export completeness summary to JSON file')
+                        
 
     args = parser.parse_args()
     return args
@@ -59,13 +78,20 @@ def get_logs(args):
 def main():
     try:
         args = get_arguments()
-        logfiles = get_logs(args)
-        if not logfiles:
-            # logger.warn("No logfiles, nothing to do. Stopping.")
-            print("No logfiles, nothing to do. Stopping.")
+        if args.do_load_classic:
+            tasks.task_load_classic_data()
+        elif args.do_completeness:
+            tasks.task_do_all_completeness()
+        elif args.do_json_export:
+            tasks.task_export_completeness_to_json()
         else:
-            for lf in logfiles:
-                tasks.task_process_logfile.delay(lf)
+            logfiles = get_logs(args)
+            if not logfiles:
+                # logger.warn("No logfiles, nothing to do. Stopping.")
+                print("No logfiles, nothing to do. Stopping.")
+            else:
+                for lf in logfiles:
+                    tasks.task_process_logfile(lf)
     except Exception as err:
         # logger.warn("Completeness processing failed: %s" % err)
         print("Completeness processing failed: %s" % err)

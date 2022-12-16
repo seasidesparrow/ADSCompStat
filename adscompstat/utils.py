@@ -1,3 +1,4 @@
+import json
 import re
 from bs4 import BeautifulSoup
 from adscompstat.exceptions import *
@@ -85,39 +86,45 @@ def simple_parse_one_meta_xml(filename):
     except Exception as err:
         raise ParseMetaXMLException(err)
 
+# loading bibcode-doi and bibstem-issn data into postgres
 
 def load_classic_doi_bib_dict(infile):
     # Classic: DOI-bibcode mapping 
     classic_bib_doi_dict = dict()
+    ignorecount = 0
     try:
         with open(infile, 'r') as fa:
             for l in fa.readlines():
                 try:
                     (bibcode, doi) = l.strip().split('\t')
-                    classic_bib_doi_dict[doi] = bibcode
+                    if not classic_bib_doi_dict.get(doi, None):
+                        classic_bib_doi_dict[doi] = bibcode
+                    else:
+                        ignorecount += 1
                 except Exception as err:
                     # logger.debug("bad line in %s: %s" % (infile, l.strip()))
                     pass
     except Exception as err:
         raise LoadClassicDataException("Unable to load classic dois and bibcodes! %s" % err)
+    print('%s records ignored.' % str(ignorecount))
     return classic_bib_doi_dict
 
-
-def invert_doi_bib_dict(input_dict):
-    inverted_dict = dict()
-    if input_dict:
-        for k, v in input_dict.items():
-            try:
-                newkey = v
-                newval = k
-                if inverted_dict.get(newkey, None):
-                    inverted_dict[newkey].append(newval)
+def load_journalsdb_issn_bibstem_list(infile):
+    issn_bibstem_list = list()
+    issn_dups = dict()
+    try:
+        with open(infile, 'r') as fi:
+            for l in fi.readlines():
+                (bibstem, issntype, issn) = l.strip().split('\t')
+                if not issn_dups.get(issn, None):
+                    issn_dups[issn] = 1
+                    issn_bibstem_list.append({'issn': issn, 'bibstem': bibstem, 'issn_type': issntype})
                 else:
-                    inverted_dict[newkey] = [newval]
-            except Exception as err:
-                # logger.debug("problem in invert_doi_bib_dict (%s, %s): %s" % (k, v, err))
-                pass
-    return inverted_dict
+                    print("Warning: ISSN %s is a duplicate!" % issn)
+    except Exception as err:
+        raise LoadIssnDataException('Unable to load bibstem-issn map: %s' % err)
+    return issn_bibstem_list
+         
 
 
 def load_classic_canonical_list(infile):
@@ -145,13 +152,75 @@ def load_classic_noncanonical_bibs(bibfile):
                     (noncbib, canonical) = l.strip().split()
                 except Exception:
                     # logger.debug("singleton bibcode in %s: %s" % (infile, l.strip()))
-                    pass
-                else:
-                    if noncbibcodes.get(canonical, None):
-                        noncbibcodes[canonical].append(noncbib)
-                    else:
-                        noncbibcodes[canonical] = [noncbib]
+                    # pass
+                    noncbib = l.strip()
+                    canonical = 'none'
+                if not noncbibcodes.get(noncbib, None):
+                    noncbibcodes[noncbib] = canonical
     except Exception as err:
-        raise LoadClassicDataException("Unable to load classic alt/del bibcodes! %s" % err)
+        raise LoadClassicDataException("Unable to load noncanonical bibcodes from %s: %s" % (bibfile, err))
     else:
         return noncbibcodes
+
+
+def merge_bibcode_lists(canonicalfile, alternatefile, deletedfile, allfile):
+    merged_bibcodes = {}
+    try:
+        canonical_bibs_list = load_classic_canonical_list(canonicalfile)
+        alternate_bibs_dict = load_classic_noncanonical_bibs(alternatefile)
+        deleted_bibs_dict = load_classic_noncanonical_bibs(deletedfile)
+        all_bibs_dict = load_classic_noncanonical_bibs(allfile)
+        for can in canonical_bibs_list:
+            if not merged_bibcodes.get(can, None):
+                merged_bibcodes[can] = {'canonical_id': can, 'idtype': 'canonical'}
+        for alt, can in alternate_bibs_dict.items():
+            if not merged_bibcodes.get(alt, None):
+                merged_bibcodes[alt] = {'canonical_id': can, 'idtype': 'alternate'}
+        for dlt, can in deleted_bibs_dict.items():
+            if not merged_bibcodes.get(dlt, None):
+                merged_bibcodes[dlt] = {'canonical_id': can, 'idtype': 'deleted'}
+        for oth, can in all_bibs_dict.items():
+            if not merged_bibcodes.get(oth, None):
+                if can == 'none':
+                    merged_bibcodes[oth] = {'canonical_id': can, 'idtype': 'noindex'}
+                else:
+                    merged_bibcodes[oth] = {'canonical_id': can, 'idtype': 'other'}
+    except Exception as err:
+        raise MergeClassicDataException("Unable to merge bibcodes lists: %s" % err)
+    return merged_bibcodes
+
+
+def get_completeness_fraction(byVolumeData):
+    totals = dict()
+    matches = ['canonical','partial','alternate','deleted']
+    unmatches = ['mismatch','unmatched']
+    totalMatch = 0
+    totalUnmatch = 0
+    totalNoIndex = 0
+    try:
+        for rec in byVolumeData:
+            match = rec.get('matchtype')
+            status = rec.get('status')
+            count = rec.get('count')
+            if match in matches:
+                totalMatch += count
+            elif match in unmatches:
+                totalUnmatch += count
+            elif status == 'NoIndex':
+                totalNoIndex += count
+        totalIndexable = totalMatch + totalUnmatch
+        completenessFraction = totalMatch / totalIndexable
+        return (totalIndexable, completenessFraction)
+    except Exception as err:
+        raise CompletenessFractionException("Unable to calculate completeness: %s" % err)
+
+
+def export_completeness_data(allData, outfile):
+    if not outfile:
+        raise MissingFilenameException("Completeness JSON filename location not configured.")
+    else:
+        try:
+            with open(outfile, 'w') as fj:
+                fj.write(json.dumps(allData))
+        except Exception as err:
+            raise JsonExportException(err)
