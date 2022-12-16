@@ -48,3 +48,19 @@ class RecordException(Exception):
 
 class GetLogException(Exception):
     pass
+
+
+class DBClearException(Exception):
+    pass
+
+
+class CompletenessFractionException(Exception):
+    pass
+
+
+class JsonExportException(Exception):
+    pass
+
+
+class MissingFilenameException(Exception):
+    pass

@@ -4,16 +4,7 @@ from config import *
 class CrossrefMatcher(object):
 
     def __init__(self):
-        self.classicDoiBibDict = utils.load_classic_doi_bib_dict(CLASSIC_DOI_FILE)
-        self.invertedBibDoiDict = utils.invert_doi_bib_dict(self.classicDoiBibDict)
-        self.canonicalBibList = set(utils.load_classic_canonical_list(CLASSIC_CANONICAL))
-        self.classicAllBibDict = utils.load_classic_noncanonical_bibs(CLASSIC_ALLBIBS)
-        self.classicAltBibDict = utils.load_classic_noncanonical_bibs(CLASSIC_ALTBIBS)
-        self.classicDelBibDict = utils.load_classic_noncanonical_bibs(CLASSIC_DELBIBS)
-
-
-    def _get_doi_match(self, crossref_doi):
-        return self.classicDoiBibDict.get(crossref_doi, None)
+        pass
 
     def _match_bibcode_permutations(self, testBibcode, classicBibcode):
         try:
@@ -31,7 +22,7 @@ class CrossrefMatcher(object):
             testRemainder = testBibcode[4:13] + testBibcode[14:18]
             classicRemainder = classicBibcode[4:13] + classicBibcode[14:18]
             if testRemainder == classicRemainder:
-                returnDict['match'] = 'Partial'
+                returnDict['match'] = 'partial'
                 errs = {}
                 returnDict['bibcode'] = classicBibcode
                 if testYear != classicYear:
@@ -42,68 +33,43 @@ class CrossrefMatcher(object):
                     errs['init'] = classicInit
                 returnDict['errs'] = errs
             else:
-                returnDict['match'] = 'Mismatch'
+                returnDict['match'] = 'mismatch'
                 returnDict['bibcode'] = classicBibcode
         except Exception as err:
-            return
+            return {}
         return returnDict
 
 
-    def _compare_bibcodes(self, testBibcode, classicBibcode):
-        # use this if the Crossref DOI is also in classic and you
-        # want to match the bibcode that's in classic
+    def match(self, xrefBibcode, classicDoiMatches, classicBibMatches):
+        result = {}
         try:
-            returnDict = {}
-            if testBibcode == classicBibcode:
-                returnDict['match'] = 'Exact'
-                returnDict['bibcode'] = classicBibcode
+            # first, see if the generated bibcode is in classic
+            resultBib = {}
+            for match in classicBibMatches:
+                if xrefBibcode == match[0]:
+                    resultBib['match'] = match[2]
+                    resultBib['bibcode'] = match[1]
+                    resultBib['errs'] = {}
+            resultDoi = {}
+            if not classicDoiMatches:
+                resultDoi['match'] = 'unmatched'
+                resultDoi['bibcode'] = None
+                resultDoi['errs'] = {'DOI': 'Not in classic.'}
             else:
-                altBibList = self.classicAltBibDict.get(classicBibcode, [])
-                delBibList = self.classicDelBibDict.get(classicBibcode, [])
-                allBibList = self.classicAllBibDict.get(classicBibcode, [])
-                if testBibcode in altBibList:
-                    returnDict['match'] = 'Alternate'
-                    returnDict['bibcode'] = classicBibcode
-                elif testBibcode in delBibList:
-                    returnDict['match'] = 'Deleted'
-                    returnDict['bibcode'] = classicBibcode
-                elif testBibcode in allBibList:
-                    returnDict['match'] = 'Other'
-                    returnDict['bibcode'] = classicBibcode
-                else:
-                    returnDict = self._match_bibcode_permutations(testBibcode, classicBibcode)
-            if returnDict:
-                return returnDict
-            else:
-                return
+                for match in classicDoiMatches:
+                    if not resultDoi.get('bibcode', None):
+                        if xrefBibcode == match[0]:
+                            resultDoi['match'] = match[2]
+                            resultDoi['bibcode'] = match[1]
+                            resultDoi['errs'] = {}
+                        else:
+                            resultDoi = self._match_bibcode_permutations(xrefBibcode, match[0])
+            if resultBib:
+                if resultDoi.get('errs', None):
+                    resultBib['errs'] = resultDoi.get('errs')
+                result = resultBib
+            elif resultDoi:
+                result = resultDoi
         except Exception as err:
-            return
-
-
-    def match(self, xrefDOI, xrefBibcode):
-        try:
-            classicBibcode = self._get_doi_match(xrefDOI)
-            if classicBibcode:
-                result = self._compare_bibcodes(xrefBibcode, classicBibcode)
-            else:
-                result = dict()
-                if xrefBibcode in self.canonicalBibList:
-                    checkDoiList = self.invertedBibDoiDict.get(xrefBibcode, None)
-                    if checkDoiList:
-                        if xrefDOI not in checkDoiList:
-                            result['match'] = 'Other'
-                            result['bibcode'] = xrefBibcode
-                            result['errs'] = {'DOI': 'Classic DOI is different.'}
-                    else:
-                        result['match'] = 'Other'
-                        result['bibcode'] = xrefBibcode
-                        result['errs'] = {'DOI': 'Not in classic.' }
-                else:
-                    result['match'] = 'Unmatched'
-                    result['bibcode'] = None
-                    result['errs'] = {'DOI': 'Not in classic.'}
-            if result:
-                return result
-        except Exception as err:
-            print('Error in match: %s' % err)
-        return
+            logger.warning('Error matching Crossref-generated bibcode %s: %s' % (xrefBibcode, err))
+        return result

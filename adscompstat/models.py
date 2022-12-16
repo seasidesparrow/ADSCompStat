@@ -14,7 +14,7 @@ class CompStatMaster(Base):
     __tablename__ = 'master'
 
     match_status = ENUM('Matched', 'Unmatched', 'NoIndex', name='match_status')
-    match_type = ENUM('Exact', 'Deleted', 'Alternate', 'Partial', 'Mismatch', 'Unmatched', 'Other', name='match_type')
+    match_type = ENUM('canonical', 'deleted', 'alternate', 'partial', 'mismatch', 'unmatched', 'other', name='match_type')
 
     masterid = Column(Integer, primary_key=True, unique=True)
     harvest_filepath = Column(String, nullable=False)
@@ -53,9 +53,10 @@ class CompStatSummary(Base):
 
     summaryid = Column(Integer, primary_key=True, unique=True)
     bibstem = Column(String, nullable=False)
-    complete_flag = Column(Boolean, nullable=True)
+    volume = Column(String, nullable=False)
+    paper_count = Column(Integer, nullable=False)
     complete_fraction = Column(Float, nullable=True)
-    complete_byvolume = Column(Text, nullable=True)
+    complete_details = Column(Text, nullable=True)
     created = Column(UTCDateTime, default=get_date)
     updated = Column(UTCDateTime, onupdate=get_date)
 
@@ -65,7 +66,40 @@ class CompStatSummary(Base):
     def toJSON(self):
         return {'summaryid': self.summaryid,
                 'bibstem': self.bibstem,
-                'complete_flag': self.complete_flag,
+                'volume': self.volume,
+                'paper_count': self.paper_count,
                 'complete_fraction': self.complete_fraction,
-                'complete_byvolume': self.complete_byvolume,
+                'complete_details': self.complete_byvolume,
                 'updated': self.updated}
+
+
+class CompStatIdentDoi(Base):
+    __tablename__ = 'identifier_doi'
+
+    identifier = Column(String, primary_key=True, nullable=False)
+    doi = Column(String, primary_key=True, unique=True, nullable=False)
+
+    def __repr__(self):
+        return "identifier_doi.identifier='{self.identifier}', identifier_doi.doi='{self.doi}'"
+    
+
+class CompStatIssnBibstem(Base):
+    __tablename__ = 'issn_bibstem'
+
+    bibstem = Column(String, primary_key=True, nullable=False)
+    issn = Column(String, primary_key=True, unique=True, nullable=False)
+    issn_type = Column(String, nullable=False)
+
+    def __repr__(self):
+        return "issn_bibstem.bibstem='{self.bibstem}', issn_bibstem.issn='{self.issn}', issn_bibstem.issn_type='{self.issn_type}'"
+
+
+class CompStatAltIdents(Base):
+    __tablename__ = 'alt_identifiers'
+
+    identifier = Column(String, primary_key=True, unique=True, nullable=False)
+    canonical_id = Column(String, primary_key=True, unique=False, nullable=False)
+    idtype = Column(String, unique=False, nullable=False)
+
+    def __repr__(self):
+        return "alt_identifiers.identifier='{self.identifier}', alt_identifiers.canonical_id='{self.canonical_id}', alt_identifiers.idtype='{self.idtype}'"

@@ -1,10 +1,13 @@
-HARVEST_BASE_DIR = '/proj/adsx/ads_completeness/Crossref2/'
+HARVEST_BASE_DIR = '/data/Crossref/'
 
 HARVEST_LOG_DIR = HARVEST_BASE_DIR + '/UpdateAgent/'
 
-CLASSIC_DOI_FILE = '/proj/ads/abstracts/config/links/DOI/all.links'
-CLASSIC_ALTBIBS = '/proj/ads/abstracts/config/bibcodes.list.alt'
-CLASSIC_DELBIBS = '/proj/ads/abstracts/config/bibcodes.list.del'
-CLASSIC_ALLBIBS = '/proj/ads/abstracts/config/bibcodes.list.all'
-CLASSIC_CANONICAL = '/proj/ads/abstracts/config/bibcodes.list.can'
+CLASSIC_DOI_FILE = '/data/all.links'
+CLASSIC_ALTBIBS = '/data/bibcodes.list.alt'
+CLASSIC_DELBIBS = '/data/bibcodes.list.del'
+CLASSIC_ALLBIBS = '/data/bibcodes.list.all'
+CLASSIC_CANONICAL = '/data/bibcodes.list.can'
 
+JOURNALSDB_ISSN_BIBSTEM = '/data/issn_identifiers'
+
+COMPLETENESS_EXPORT_FILE = '/data/completeness_export.json'
