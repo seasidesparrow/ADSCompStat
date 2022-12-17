@@ -200,6 +200,7 @@ def task_do_all_completeness():
                 session.commit()
             else:
                 logger.warning("Completeness summary table wasn't deleted")
+        bibstems = [x[0] for x in bibstems]
         for bibstem in bibstems:
             task_completeness_per_bibstem.delay(bibstem)
     except Exception as err:
