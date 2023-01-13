@@ -43,7 +43,7 @@ def get_arguments():
                         action='store_true',
                         default=False,
                         help='Export completeness summary to JSON file')
-                        
+
 
     args = parser.parse_args()
     return args
