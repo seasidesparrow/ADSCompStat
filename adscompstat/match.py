@@ -10,18 +10,25 @@ class CrossrefMatcher(object):
         try:
             returnDict = {}
             # check the year
-            testYear = int(testBibcode[0:4])
-            classicYear = int(classicBibcode[0:4])
+            testYear = testBibcode[0:4]
+            classicYear = classicBibcode[0:4]
+            # check the bibstem
+            testBibstem = testBibcode[4:9]
+            classicBibstem = classicBibcode[4:9]
+            # check the base volume
+            testVol = testBibcode[9:13]
+            classicVol = classicBibcode[9:13]
             # check the qualifier letter
             testQual = testBibcode[13]
             classicQual = classicBibcode[13]
+            # check the base page
+            testPage = testBibcode[14:18]
+            classicPage = classicBibcode[14:18]
             # check the author init
             testInit = testBibcode[18]
             classicInit = classicBibcode[18]
-            # rest of bibcode
-            testRemainder = testBibcode[4:13] + testBibcode[14:18]
-            classicRemainder = classicBibcode[4:13] + classicBibcode[14:18]
-            if testRemainder == classicRemainder:
+
+            if testBibstem == classicBibstem:
                 returnDict['match'] = 'partial'
                 errs = {}
                 returnDict['bibcode'] = classicBibcode
@@ -31,12 +38,24 @@ class CrossrefMatcher(object):
                     errs['qual'] = classicQual
                 if testInit != classicInit:
                     errs['init'] = classicInit
+                if testVol != classicVol:
+                    try:
+                        if int(testVol) != int(classicVol):
+                            errs['vol'] = classicVol
+                    except Exception as err:
+                        errs['vol'] = classicVol
+                if testPage != classicPage:
+                    try:
+                        if int(testPage) != int(classicPage):
+                            errs['page'] = classicPage
+                    except Exception as err:
+                        errs['page'] = classicPage
                 returnDict['errs'] = errs
             else:
                 returnDict['match'] = 'mismatch'
                 returnDict['bibcode'] = classicBibcode
         except Exception as err:
-            return {}
+            return {'match': 'mismatch', 'bibcode': classicBibcode}
         return returnDict
 
 
