@@ -1,11 +1,11 @@
+import os
 from adscompstat import utils
 from adscompstat import tasks
 from adscompstat.exceptions import GetLogException
 from adsputils import load_config
-from config import *
 import argparse
 
-proj_home = os.path.realpath(os.path.join(os.path.dirname(__file__), '../'))
+proj_home = os.path.realpath(os.path.join(os.path.dirname(__file__), './'))
 conf = load_config(proj_home=proj_home)
 
 def get_arguments():
@@ -49,7 +49,7 @@ def get_arguments():
     return args
 
 def get_logs(args):
-    logfiles = utils.get_updateagent_logs(conf.get('HARVEST_LOG_DIR','/data/Crossref/UpdateAgent/'))
+    logfiles = utils.get_updateagent_logs(conf.get('HARVEST_LOG_DIR','/'))
     if logfiles:
         logfiles.sort()
         (dates, pubdois) = utils.parse_pub_and_date_from_logs(logfiles)
@@ -95,7 +95,7 @@ def main():
                 print("No logfiles, nothing to do. Stopping.")
             else:
                 for lf in logfiles:
-                    tasks.task_process_logfile(lf)
+                    tasks.task_process_logfile.delay(lf)
     except Exception as err:
         # logger.warn("Completeness processing failed: %s" % err)
         print("Completeness processing failed: %s" % err)
