@@ -1,8 +1,12 @@
 from adscompstat import utils
 from adscompstat import tasks
 from adscompstat.exceptions import GetLogException
+from adsputils import load_config
 from config import *
 import argparse
+
+proj_home = os.path.realpath(os.path.join(os.path.dirname(__file__), '../'))
+conf = load_config(proj_home=proj_home)
 
 def get_arguments():
     parser = argparse.ArgumentParser(description='Command line options.')
@@ -45,7 +49,7 @@ def get_arguments():
     return args
 
 def get_logs(args):
-    logfiles = utils.get_updateagent_logs(HARVEST_LOG_DIR)
+    logfiles = utils.get_updateagent_logs(conf.get('HARVEST_LOG_DIR','/data/Crossref/UpdateAgent/'))
     if logfiles:
         logfiles.sort()
         (dates, pubdois) = utils.parse_pub_and_date_from_logs(logfiles)
