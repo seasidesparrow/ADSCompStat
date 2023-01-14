@@ -223,6 +223,8 @@ def task_completeness_per_bibstem(bibstem):
         volumeSummary = dict()
         for r in result:
             vol = r[0][5:].lstrip('.').rstrip('.')
+            if vol[-1] not in ['L', 'S', 'P']:
+                vol = vol[0:-1]
             stat = r[1]
             mtype = r[2]
             count = r[3]
