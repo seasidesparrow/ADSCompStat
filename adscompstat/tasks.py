@@ -21,7 +21,8 @@ app.conf.CELERY_QUEUES = (
     Queue('parse-metafile', app.exchange, routing_key='parse-metafile'),
     Queue('add-emptyrecord', app.exchange, routing_key='add-emptyrecord'),
     Queue('compute-stats', app.exchange, routing_key='compute-stats'),
-    Queue('output-metadata', app.exchange, routing_key='output-metadata')
+    Queue('output-metadata', app.exchange, routing_key='output-metadata'),
+    Queue('get-logfiles', app.exchange, routing_key='get-logfiles')
 )
 
 @app.task(queue='output-metadata')
@@ -222,6 +223,8 @@ def task_completeness_per_bibstem(bibstem):
         volumeSummary = dict()
         for r in result:
             vol = r[0][5:].lstrip('.').rstrip('.')
+            if vol[-1] not in ['L', 'S', 'P']:
+                vol = vol[0:-1]
             stat = r[1]
             mtype = r[2]
             count = r[3]
@@ -250,6 +253,7 @@ def task_completeness_per_bibstem(bibstem):
                         logger.warning("Error writing summary data for %s, v %s: %s" % (bibstem,k,err))
 
 
+@app.task(queue='get-logfiles')
 def task_process_logfile(infile):
     try:
         files_to_process = utils.read_updateagent_log(infile)

@@ -64,3 +64,7 @@ class JsonExportException(Exception):
 
 class MissingFilenameException(Exception):
     pass
+
+
+class LoadIssnDataException(Exception):
+    pass
