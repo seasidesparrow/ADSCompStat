@@ -213,7 +213,7 @@ def task_completeness_per_bibstem(bibstem):
         bibstem = bibstem.ljust(5, ".")
     try:
         with app.session_scope() as session:
-            result = session.query(func.substr(master.bibcode_meta, 5, 10),master.status,master.matchtype,func.count(master.bibcode_meta)).filter(func.substr(master.bibcode_meta, 5, 5)==bibstem).group_by(func.substr(master.bibcode_meta, 5, 10), master.status, master.matchtype).all()
+            result = session.query(func.substr(master.bibcode_meta, 10, 5),master.status,master.matchtype,func.count(master.bibcode_meta)).filter(func.substr(master.bibcode_meta, 5, 5)==bibstem).group_by(func.substr(master.bibcode_meta, 10, 5), master.status, master.matchtype).all()
     except Exception as err:
         logger.warning("Failed to get completeness summary for bibstem %s: %s" % (bibstem, err))
     else:
@@ -222,9 +222,10 @@ def task_completeness_per_bibstem(bibstem):
         # volumes.sort()
         volumeSummary = dict()
         for r in result:
-            vol = r[0][5:].lstrip('.').rstrip('.')
-            if vol[-1] not in ['L', 'S', 'P']:
+            vol = r[0]
+            if vol[-1] not in ['L', 'P', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9']:
                 vol = vol[0:-1]
+            vol = vol.lstrip('.').rstrip('.')
             stat = r[1]
             mtype = r[2]
             count = r[3]
@@ -301,8 +302,8 @@ def task_export_completeness_to_json():
                 utils.export_completeness_data(allData, app.conf.get('COMPLETENESS_EXPORT_FILE', None))
         except Exception as err:
             logger.error("Unable to export completeness data to disk: %s" % err)
-                
-                
+
+
 
 def task_load_classic_data():
     # You have three tables to load....
@@ -386,4 +387,3 @@ def task_load_classic_data():
                     session.rollback()
                     session.flush()
                     logger.error("Error loading bibstem-issn mapping: %s" % err)
-
