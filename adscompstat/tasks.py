@@ -14,15 +14,15 @@ from adscompstat.exceptions import *
 from sqlalchemy import func
 
 proj_home = os.path.realpath(os.path.join(os.path.dirname(__file__), "../"))
-app = app_module.ADSCompStatCelery("compstat-pipeline", proj_home=proj_home, config=globals().get("config", {}), local_config=globals().get("local_config", {}))
+app = app_module.ADSCompStatCelery("completeness-statistics-pipeline", proj_home=proj_home, config=globals().get("config", {}), local_config=globals().get("local_config", {}))
 logger = app.logger
 
 app.conf.CELERY_QUEUES = (
-    Queue("parse-metafile", app.exchange, routing_key="parse-metafile"),
-    Queue("add-emptyrecord", app.exchange, routing_key="add-emptyrecord"),
-    Queue("compute-stats", app.exchange, routing_key="compute-stats"),
-    Queue("output-metadata", app.exchange, routing_key="output-metadata"),
-    Queue("get-logfiles", app.exchange, routing_key="get-logfiles")
+    # Queue("parse-metafile", app.exchange, routing_key="parse-metafile"),
+    # Queue("add-emptyrecord", app.exchange, routing_key="add-emptyrecord"),
+    # Queue("compute-stats", app.exchange, routing_key="compute-stats"),
+    # Queue("output-metadata", app.exchange, routing_key="output-metadata"),
+    Queue("get-logfiles", app.exchange, routing_key="get-logfiles"),
 )
 
 @app.task(queue="get-logfiles")
