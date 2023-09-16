@@ -51,6 +51,7 @@ def task_parse_meta(infile_batch):
     try:
         failures = []
         batch_out = []
+        bibgen = BibcodeGenerator()
         for infile in infile_batch:
             try:
                 record = utils.parse_one_meta_xml(infile)
@@ -63,8 +64,9 @@ def task_parse_meta(infile_batch):
                                 issnString = issn.get("issnString", None)
                                 if issnString:
                                     bibstem = session.query(issn_bibstem.bibstem).filter(issn_bibstem.issn==issn).first()
-                            
-                      
+                        if bibstem:
+                            bibcode = bibgen.make_bibcode(record, bibstem=bibstem)
+                            logger.info("Got bibcode: %s" % bibcode)
                 else:
                     failures.append({"file": infile, "status": "parser failed"})
             except Exception as err:
