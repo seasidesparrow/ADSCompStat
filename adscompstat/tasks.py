@@ -37,11 +37,11 @@ def task_process_logfile(infile):
             batch.append(xmlFilePath)
             if len(batch) > batch_count:
                 logger.debug("Calling task_parse_meta with batch '%s'" % batch)
-                task_parse_meta.delay(batch)
+                task_parse_meta(batch)
                 batch = []
         if len(batch):
             logger.debug("Calling task_parse_meta with batch '%s'" % batch)
-            task_parse_meta.delay(batch)
+            task_parse_meta(batch)
     except Exception as err:
         logger.error("Error processing logfile %s: %s" % (infile, err))
 
@@ -63,10 +63,12 @@ def task_parse_meta(infile_batch):
                             if not bibstem:
                                 issnString = issn.get("issnString", None)
                                 if issnString:
-                                    bibstem = session.query(issn_bibstem.bibstem).filter(issn_bibstem.issn==issn).first()
+                                    bibstem = session.query(issn_bibstem.bibstem).filter(issn_bibstem.issn==issnString).first()
                         if bibstem:
                             bibcode = bibgen.make_bibcode(record, bibstem=bibstem)
-                            logger.info("Got bibcode: %s" % bibcode)
+                            logger.debug("Got bibcode from %s: %s" % (infile, bibcode))
+                        else:
+                            logger.debug("No bibcode from record %s" % infile)
                 else:
                     failures.append({"file": infile, "status": "parser failed"})
             except Exception as err:
