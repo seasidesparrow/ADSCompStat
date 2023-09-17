@@ -28,7 +28,7 @@ app.conf.CELERY_QUEUES = (
 
 @app.task(queue="get-logfiles")
 def task_process_logfile(infile):
-    batch_count = conf.get("RECORDS_PER_BATCH", 100)
+    batch_count = app.conf.get("RECORDS_PER_BATCH", 100)
     try: 
         files_to_process = utils.read_updateagent_log(infile)
         batch = []
@@ -70,7 +70,13 @@ def task_parse_meta(infile_batch):
                 else:
                     failures.append({"file": infile, "status": "parser failed"})
             except Exception as err:
-                failures.append({"file": infile, "status": "error: %s" % err}
-        
+                failures.append({"file": infile, "status": "error: %s" % err})
+        if failures:
+           batch_size = len(infile_batch)
+           fail_size = len(failures)
+           logger.warning("Failed records: %s of %s records failed in this batch." % (fail_size, batch_size))
+           logger.debug("Failures: %s" % str(failures))
+        else:
+           logger.info("No failed records in batch.")
     except Exception as err:
         logger.error("Error processing record bundle: %s" % err)
