@@ -68,7 +68,8 @@ def _fetch_bibstem(record):
                     if issnString:
                         try:
                             bibstem_result = session.query(issn_bibstem.bibstem).filter(issn_bibstem.issn==issnString).first()
-                            bibstem = bibstem_result[0]
+                            if bibstem_result:
+                                bibstem = bibstem_result[0]
                         except Exception as err:
                             logger.warning("Error from database call: %s" % err)
     except Exception as err:
