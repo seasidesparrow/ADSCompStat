@@ -47,7 +47,7 @@ def task_process_logfile(infile):
         for xmlFile in files_to_process:
             xmlFilePath = app.conf.get("HARVEST_BASE_DIR", "/") + xmlFile
             batch.append(xmlFilePath)
-            if len(batch) > batch_count:
+            if len(batch) == batch_count:
                 logger.debug("Calling task_parse_meta with batch '%s'" % batch)
                 task_parse_meta(batch)
                 batch = []
