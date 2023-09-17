@@ -97,8 +97,8 @@ def task_parse_meta(infile_batch):
                     failures.append({"file": infile, "status": "parser failed"})
             except Exception as err:
                 failures.append({"file": infile, "status": "error: %s" % err})
+        batch_size = len(infile_batch)
         if failures:
-           batch_size = len(infile_batch)
            fail_size = len(failures)
            logger.warning("Failed records: %s of %s records failed in this batch." % (fail_size, batch_size))
            logger.debug("Failures: %s" % str(failures))
