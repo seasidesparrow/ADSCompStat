@@ -28,6 +28,18 @@ app.conf.CELERY_QUEUES = (
 
 @app.task(queue="get-logfiles")
 def task_process_logfile(infile):
+    """
+    Parse one oaipmh harvesting logfile to retrieve newly downloaded records,
+    and forward batches of those records to task_parse_meta().  The filename
+    in the logfile assumes the same HARVEST_BASE_DIR as the logfiles
+    themselves, and prepends the full path to the relative path in the file.
+
+    Parameters:
+    infile (string): path to one logfile
+
+    Returns:
+    """
+
     batch_count = app.conf.get("RECORDS_PER_BATCH", 100)
     try: 
         files_to_process = utils.read_updateagent_log(infile)
@@ -45,6 +57,24 @@ def task_process_logfile(infile):
     except Exception as err:
         logger.error("Error processing logfile %s: %s" % (infile, err))
 
+def _fetch_bibstem(record):
+    try:
+        with app.session_scope() as session:
+            issn_list = record.get("publication", {}).get("ISSN", [])
+            bibstem = None
+            for issn in issn_list:
+                if not bibstem:
+                    issnString = issn.get("issnString", None)
+                    if issnString:
+                        try:
+                            bibstem_result = session.query(issn_bibstem.bibstem).filter(issn_bibstem.issn==issnString).first()
+                            bibstem = bibstem_result[0]
+                        except Exception as err:
+                            logger.warning("Error from database call: %s" % err)
+    except Exception as err:
+        raise BibstemLookupException(err)
+    else:
+        return bibstem
 
 @app.task(queue="parse-meta")
 def task_parse_meta(infile_batch):
@@ -56,20 +86,13 @@ def task_parse_meta(infile_batch):
             try:
                 record = utils.parse_one_meta_xml(infile)
                 if record:
-                    with app.session_scope() as session:
-                        issn_list = record.get("publication", {}).get("ISSN", [])
-                        bibstem = None
-                        for issn in issn_list:
-                            if not bibstem:
-                                issnString = issn.get("issnString", None)
-                                if issnString:
-                                    bibstem_result = session.query(issn_bibstem.bibstem).filter(issn_bibstem.issn==issnString).first()
-                                    bibstem = bibstem_result[0]
-                        if bibstem:
-                            bibcode = bibgen.make_bibcode(record, bibstem=bibstem)
-                            logger.debug("Got bibcode from %s: %s" % (infile, bibcode))
-                        else:
-                            logger.debug("No bibcode from record %s" % infile)
+                    bibstem = _fetch_bibstem(record)
+                    if bibstem:
+                        bibcode = bibgen.make_bibcode(record, bibstem=bibstem)
+                        logger.debug("Got bibcode from %s: %s" % 
+                                         (infile, bibcode) )
+                    else:
+                        logger.debug("No bibcode from record %s" % infile)
                 else:
                     failures.append({"file": infile, "status": "parser failed"})
             except Exception as err:
@@ -80,6 +103,6 @@ def task_parse_meta(infile_batch):
            logger.warning("Failed records: %s of %s records failed in this batch." % (fail_size, batch_size))
            logger.debug("Failures: %s" % str(failures))
         else:
-           logger.info("No failed records in batch.")
+           logger.info("No (0) failed records in batch (%s)." % batch_size)
     except Exception as err:
-        logger.error("Error processing record bundle: %s" % err)
+        logger.error("Error processing record batch %s: %s" % (infile_batch, err) )
