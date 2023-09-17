@@ -63,8 +63,8 @@ def task_parse_meta(infile_batch):
                             if not bibstem:
                                 issnString = issn.get("issnString", None)
                                 if issnString:
-                                    bibstem = session.query(issn_bibstem.bibstem).filter(issn_bibstem.issn==issnString).first()
-                                    print("\n\n\nbibstem: %s\n\n\n" % bibstem)
+                                    bibstem_result = session.query(issn_bibstem.bibstem).filter(issn_bibstem.issn==issnString).first()
+                                    bibstem = bibstem_result[0]
                         if bibstem:
                             bibcode = bibgen.make_bibcode(record, bibstem=bibstem)
                             logger.debug("Got bibcode from %s: %s" % (infile, bibcode))
