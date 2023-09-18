@@ -10,7 +10,7 @@ from adsputils import load_config, setup_logging
 
 proj_home = os.path.realpath(os.path.join(os.path.dirname(__file__), '../'))
 conf = load_config(proj_home=proj_home)
-logger = setup_logging('adscompstat_utils.py', proj_home=proj_home,
+logger = setup_logging('completeness-statistics-pipeline', proj_home=proj_home,
                        level=conf.get('LOGGING_LEVEL', 'INFO'),
                        attach_stdout=conf.get('LOG_STDOUT', False))
 

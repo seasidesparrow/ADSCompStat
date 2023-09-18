@@ -33,6 +33,7 @@ def task_clear_classic_data():
             session.query(alt_identifiers).delete()
             session.query(issn_bibstem).delete()
             session.commit()
+            logger.info("Existing classic data tables cleared.")
         except Exception as err:
             session.rollback()
             session.commit()
@@ -41,12 +42,13 @@ def task_clear_classic_data():
 
 @app.task(queue="write-db", serializer="pickle")
 def task_write_block_to_db(table, datablock):
-    try:
-        with app.session_scope() as session:
+    with app.session_scope() as session:
+        try:
             session.bulk_insert_mappings(table, datablock)
             session.commit()
-    except Exception as err:
-        logger.error("Failed to write data block: %s" % err)
+            session.flush()
+        except Exception as err:
+            logger.error("Failed to write data block: %s" % err)
 
 
 @app.task(queue="get-logfiles")

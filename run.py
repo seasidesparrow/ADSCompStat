@@ -85,7 +85,7 @@ def get_logs(args):
 
 def write_to_database(table_def, data):
     try:
-        blocksize = conf.get("CLASSIC_DATA_BLOCKSIZE", 10000)
+        blocksize = conf.get("CLASSIC_DATA_BLOCKSIZE", 100000)
         total_rows = len(data)
         if data and table_def:
             i = 0
@@ -107,6 +107,15 @@ def load_classic_data():
         raise DBClearException(err)
     else:
 
+        # load bibstem-ISSN map
+        infile = conf.get("JOURNALSDB_ISSN_BIBSTEM", None)
+        records = utils.load_journalsdb_issn_bibstem_list(infile)
+        if records:
+            table_def = issn_bibstem
+            write_to_database(table_def, records)
+        else:
+            raise LoadClassicDataException("No ISSN-bibstem data found.")
+
         # load bibcode-DOI map
         infile = conf.get("CLASSIC_DOI_FILE", None)
         if infile:
@@ -119,16 +128,7 @@ def load_classic_data():
         else:
             raise LoadClassicDataException("No DOI-bibcode data found.")
 
-        # load bibstem-ISSN map
-        infile = conf.get("JOURNALSDB_ISSN_BIBSTEM", None)
-        records = utils.load_journalsdb_issn_bibstem_list(infile)
-        if records:
-            table_def = issn_bibstem
-            write_to_database(table_def, records)
-        else:
-            raise LoadClassicDataException("No ISSN-bibstem data found.")
-
-        # Alternate & deleted bibcode mappings
+        # load alternate and deleted bibcode mappings
         infile_can = conf.get("CLASSIC_CANONICAL", None)
         infile_alt = conf.get("CLASSIC_ALTBIBS", None)
         infile_del = conf.get("CLASSIC_DELBIBS", None)
