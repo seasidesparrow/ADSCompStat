@@ -251,10 +251,6 @@ def task_match_with_classic(record_batch):
 
             if matches:
                 task_write_results_to_master.delay(matches)
-        except Exception as err:
-            logger.warning("Error creating a master record, record not added to database: %s" % err)
-
-
 
     except Exception as err:
         logger.error("Error matching record batch %s: %s" %
