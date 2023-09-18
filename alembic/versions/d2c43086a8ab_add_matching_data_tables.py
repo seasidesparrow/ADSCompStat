@@ -18,32 +18,21 @@ depends_on = None
 def upgrade():
     # master record for each doi
     op.create_table('identifier_doi',
-                    sa.Column('identifier', sa.String(), index=True,
-                              primary_key=True, nullable=False),
-                    sa.Column('doi', sa.String(), index=True,
-                              primary_key=True, nullable=False),
-                    sa.PrimaryKeyConstraint('identifier', 'doi'),
-                    sa.UniqueConstraint('doi')
+                    sa.Column('identifier', sa.String()),
+                    sa.Column('doi', sa.String())
                    )
 
     op.create_table('issn_bibstem',
-                    sa.Column('bibstem', sa.String(), index=True,
-                              primary_key=True, nullable=False),
-                    sa.Column('issn', sa.String(), index=True,
-                              primary_key=True, nullable=False),
-                    sa.Column('issn_type', sa.String(), nullable=False),
-                    sa.PrimaryKeyConstraint('bibstem', 'issn')
+                    sa.Column('bibstem', sa.String()),
+                    sa.Column('issn', sa.String()),
+                    sa.Column('issn_type', sa.String())
                    )
 
     op.create_table('alt_identifiers',
-                    sa.Column('identifier', sa.String(), index=True,
-                              primary_key=True, nullable=False),
-                    sa.Column('canonical_id', sa.String(), index=True,
-                              primary_key=True, nullable=False,
+                    sa.Column('identifier', sa.String()),
+                    sa.Column('canonical_id', sa.String(),
                               server_default=''),
-                    sa.Column('idtype', sa.String(), nullable=False,
-                              server_default=''),
-                    sa.PrimaryKeyConstraint('identifier', 'canonical_id')
+                    sa.Column('idtype', sa.String())
                    )
 
     # ### end Alembic commands ###

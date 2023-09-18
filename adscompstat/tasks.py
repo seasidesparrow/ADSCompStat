@@ -21,7 +21,7 @@ app.conf.CELERY_QUEUES = (
     Queue("get-logfiles", app.exchange, routing_key="get-logfiles"),
     Queue("parse-meta", app.exchange, routing_key="parse-meta"),
     Queue("match-classic", app.exchange, routing_key="match-classic"),
-    Queue("write-db", app.exchange, routing_key="write-db"),
+    # Queue("write-db", app.exchange, routing_key="write-db"),
     # Queue("compute-stats", app.exchange, routing_key="compute-stats"),
 )
 
@@ -40,14 +40,14 @@ def task_clear_classic_data():
             logger.error("Failed to clear classic data tables: %s" % err)
 
 
-@app.task(queue="write-db", serializer="pickle")
 def task_write_block_to_db(table, datablock):
     with app.session_scope() as session:
         try:
             session.bulk_insert_mappings(table, datablock)
             session.commit()
-            session.flush()
         except Exception as err:
+            session.rollback()
+            session.commit()
             logger.error("Failed to write data block: %s" % err)
 
 
