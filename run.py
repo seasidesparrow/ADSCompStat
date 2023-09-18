@@ -86,9 +86,10 @@ def get_logs(args):
 def write_to_database(table_def, data):
     try:
         blocksize = conf.get("CLASSIC_DATA_BLOCKSIZE", 10000)
+        total_rows = len(data)
         if data and table_def:
             i = 0
-            while i < len(data):
+            while i < total_rows:
                 logger.debug("Writing to db: %s of %s rows remaining" %
                                 (len(data)-i, total_rows))
                 insertblock = data[i:i+blocksize]
