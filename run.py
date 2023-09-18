@@ -147,10 +147,10 @@ def main():
         args = get_arguments()
 
         if args.do_load_classic:
-            try:
-                load_classic_data()
-            except Exception as err:
-                logger.error("Failed to load classic data: %s" % err)
+            #try:
+            load_classic_data()
+            #except Exception as err:
+            #    logger.error("Failed to load classic data: %s" % err)
 
         elif args.do_completeness:
             tasks.task_do_all_completeness()

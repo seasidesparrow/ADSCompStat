@@ -111,7 +111,7 @@ def load_classic_doi_bib_map(infile):
                                                 "identifier": bibcode})
                         found_doi[doi] = 1
                     else:
-                        logger.warning("Duplicate doi detected: (%s, %s)" %
+                        logger.debug("Duplicate doi detected: (%s, %s)" %
                                           (bibcode, doi))
                 except Exception as err:
                     logger.warning("bad line in %s: %s" % (infile, err))
@@ -120,7 +120,7 @@ def load_classic_doi_bib_map(infile):
         raise LoadClassicDataException("Unable to load classic dois and bibcodes! %s" % err)
     return records_bib_doi
 
-def read_journalsdb_issn_bibstem_list(infile):
+def load_journalsdb_issn_bibstem_list(infile):
     records_issn_bibstem = list()
     issn_dups = dict()
     try:
@@ -132,7 +132,7 @@ def read_journalsdb_issn_bibstem_list(infile):
                     records_issn_bibstem.append({'issn': issn,
                                                  'bibstem': bibstem,                                                             'issn_type': issntype})
                 else:
-                    logger.warning("ISSN %s is a duplicate!" % issn)
+                    logger.debug("ISSN %s is a duplicate!" % issn)
     except Exception as err:
         raise LoadIssnDataException('Unable to load bibstem-issn map: %s' % err)
     return records_issn_bibstem

@@ -39,7 +39,7 @@ def task_clear_classic_data():
             logger.error("Failed to clear classic data tables: %s" % err)
 
 
-@app.task(queue="write-db")
+@app.task(queue="write-db", serializer="pickle")
 def task_write_block_to_db(table, datablock):
     try:
         with app.session_scope() as session:
