@@ -93,7 +93,7 @@ def write_to_database(table_def, data):
                 logger.debug("Writing to db: %s of %s rows remaining" %
                                 (len(data)-i, total_rows))
                 insertblock = data[i:i+blocksize]
-                tasks.task_write_block_to_db.delay(table_def, insertblock)
+                tasks.task_write_block_to_db(table_def, insertblock)
                 i += blocksize
     except Exception as err:
         raise DBWriteException(err)
