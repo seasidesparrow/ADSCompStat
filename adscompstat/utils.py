@@ -6,7 +6,7 @@ from adscompstat.exceptions import *
 from adsingestp.parsers.crossref import CrossrefParser
 from adsingestp.parsers.base import BaseBeautifulSoupParser
 from glob import glob
-from adsputils import setup_logging
+from adsputils import load_config, setup_logging
 
 proj_home = os.path.realpath(os.path.join(os.path.dirname(__file__), '../'))
 conf = load_config(proj_home=proj_home)
