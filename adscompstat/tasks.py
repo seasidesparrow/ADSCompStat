@@ -21,8 +21,8 @@ app.conf.CELERY_QUEUES = (
     Queue("get-logfiles", app.exchange, routing_key="get-logfiles"),
     Queue("parse-meta", app.exchange, routing_key="parse-meta"),
     Queue("match-classic", app.exchange, routing_key="match-classic"),
+    Queue("write-db", app.exchange, routing_key="write-db"),
     # Queue("compute-stats", app.exchange, routing_key="compute-stats"),
-    # Queue("write-db", app.exchange, routing_key="write-db"),
 )
 
 
@@ -47,73 +47,6 @@ def task_write_block_to_db(table, datablock):
             session.commit()
     except Exception as err:
         logger.error("Failed to write data block: %s" % err)
-
-
-def task_load_classic_data():
-    blocksize = app.conf.get("CLASSIC_DATA_BLOCKSIZE", 10000)
-    try:
-        task_clear_classic_data()
-    except Exception as err:
-        logger.error("Failed to clear classic data tables: %s" % err)
-    else:
-
-        # Bibstem to ISSN mapping
-        try:
-            table = issn_bibstem
-            infile = app.conf.get("JOURNALSDB_ISSN_BIBSTEM", None)
-            records = utils.load_journalsdb_issn_bibstem_list(infile)
-            if records:
-                task_write_block_to_db.delay(table, records)
-        except Exception as err:
-            logger.error("Failed to load ISSN-to-bibstem mapping: %s" % err)
-
-        # DOI-Bibcode mapping from classic
-        try:
-            table = identifier_doi
-            infile = app.conf.get("CLASSIC_DOI_FILE", None)
-            records = utils.load_classic_doi_bib_dict(infile)
-            if records:
-                insertlist = []
-                for doi, bibc in records.items():
-                    rec = {"doi": doi, "identifier": bibc}
-                    insertlist.append(rec)
-                while insertlist:
-                    insertblock = insertlist[0:blocksize]
-                    insertlist = insertlist[blocksize:]
-                    task_write_block_to_db.delay(table, insertblock)
-            else:
-                logger.error("No data from DOI-Bibcode file %s" % infile)
-        except Exception as err:
-            logger.error("Failed to load DOI-Bibcode mapping: %s" % err)
-
-        # Alternate & deleted bibcode mappings
-        try:
-            table = alt_identifiers
-            infile_can = app.conf.get("CLASSIC_CANONICAL", None)
-            infile_alt = app.conf.get("CLASSIC_ALTBIBS", None)
-            infile_del = app.conf.get("CLASSIC_DELBIBS", None)
-            infile_all = app.conf.get("CLASSIC_ALLBIBS", None)
-            records = utils.merge_bibcode_lists(infile_can, infile_alt,
-                                                infile_del, infile_all)
-            if records:
-                insertlist = []
-                for k, v in records.items():
-                    ident = k
-                    canid = v.get('canonical_id', None)
-                    idtype = v.get('idtype', None)
-                    if canid and idtype:
-                        rec = {'identifier': ident,
-                               'canonical_id': canid,
-                               'idtype': idtype}
-                        insertlist.append(rec)
-                while insertlist:
-                    insertblock = insertlist[0:blocksize]
-                    insertlist = insertlist[blocksize:]
-                    task_write_block_to_db.delay(table, insertblock)
-            else:
-                logger.error("No data from canonical/alt/deleted bibcode maps")
-        except Exception as err:
-            logger.error("Failed to load Canonical to Alt/Del bibcode maps: %s" % err)
 
 
 @app.task(queue="get-logfiles")

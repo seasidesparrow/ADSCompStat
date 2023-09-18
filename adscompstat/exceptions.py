@@ -50,6 +50,10 @@ class GetLogException(Exception):
     pass
 
 
+class DBWriteException(Exception):
+    pass
+
+
 class DBClearException(Exception):
     pass
 
