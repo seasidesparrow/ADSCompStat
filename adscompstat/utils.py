@@ -5,6 +5,13 @@ from adscompstat.exceptions import *
 from adsingestp.parsers.crossref import CrossrefParser
 from adsingestp.parsers.base import BaseBeautifulSoupParser
 from glob import glob
+from adsputils import setup_logging
+
+proj_home = os.path.realpath(os.path.join(os.path.dirname(__file__), '../'))
+conf = load_config(proj_home=proj_home)
+logger = setup_logging('adscompstat_utils.py', proj_home=proj_home,
+                       level=conf.get('LOGGING_LEVEL', 'INFO'),
+                       attach_stdout=conf.get('LOG_STDOUT', False))
 
 re_issn = re.compile(r"^\d{4}-?\d{3}[0-9X]$")
 
