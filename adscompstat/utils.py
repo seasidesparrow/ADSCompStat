@@ -139,7 +139,7 @@ def load_journalsdb_issn_bibstem_list(infile):
          
 
 
-def read_classic_canonical_list(infile):
+def load_classic_canonical_list(infile):
     canonicalList = list()
     try:
         with open(infile, 'r') as fc:

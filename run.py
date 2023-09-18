@@ -87,13 +87,13 @@ def write_to_database(table_def, data):
     try:
         blocksize = conf.get("CLASSIC_DATA_BLOCKSIZE", 10000)
         if data and table_def:
-            total_rows = len(data)
-            while data:
+            i = 0
+            while i < len(data):
                 logger.debug("Writing to db: %s of %s rows remaining" %
-                                (len(data), total_rows))
-                insertblock = data[0:blocksize]
-                data = data[blocksize:]
+                                (len(data)-i, total_rows))
+                insertblock = data[i:i+blocksize]
                 tasks.task_write_block_to_db.delay(table_def, insertblock)
+                i += blocksize
     except Exception as err:
         raise DBWriteException(err)
 
