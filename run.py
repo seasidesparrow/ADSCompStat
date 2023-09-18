@@ -93,7 +93,7 @@ def write_to_database(table_def, data):
                                 (len(data), total_rows))
                 insertblock = data[0:blocksize]
                 data = data[blocksize:]
-                task_write_block_to_db.delay(table_def, insertblock)
+                tasks.task_write_block_to_db.delay(table_def, insertblock)
     except Exception as err:
         raise DBWriteException(err)
 
@@ -101,7 +101,7 @@ def write_to_database(table_def, data):
 def load_classic_data():
     try:
         # Delete existing classic data store
-        task_clear_classic_data()
+        tasks.task_clear_classic_data()
     except Exception as err:
         raise DBClearException(err)
     else:
