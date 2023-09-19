@@ -85,7 +85,7 @@ def get_logs(args):
 
 def write_to_database(table_def, data):
     try:
-        blocksize = conf.get("CLASSIC_DATA_BLOCKSIZE", 100000)
+        blocksize = conf.get("CLASSIC_DATA_BLOCKSIZE", 10000)
         total_rows = len(data)
         if data and table_def:
             i = 0

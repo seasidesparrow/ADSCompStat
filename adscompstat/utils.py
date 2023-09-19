@@ -182,27 +182,37 @@ def merge_bibcode_lists(canonicalfile, alternatefile, deletedfile, allfile):
         alternate_bibs_dict = load_classic_noncanonical_bibs(alternatefile)
         deleted_bibs_dict = load_classic_noncanonical_bibs(deletedfile)
         all_bibs_dict = load_classic_noncanonical_bibs(allfile)
+        merged = dict()
         for can in canonical_bibs_list:
-            records_merged_bibcodes.append({"identifier": can,
-                                            "canonical_id": can,
-                                            "idtype": "canonical"})
+            if not merged.get(can, None):
+                records_merged_bibcodes.append({"identifier": can,
+                                                "canonical_id": can,
+                                                "idtype": "canonical"})
+                merged[can] = 1
         for alt, can in alternate_bibs_dict.items():
-            records_merged_bibcodes.append({"identifier": alt,
-                                            "canonical_id": can,
-                                            "idtype": "alternate"})
+            if not merged.get(alt, None):
+                records_merged_bibcodes.append({"identifier": alt,
+                                                "canonical_id": can,
+                                                "idtype": "alternate"})
+                merged[alt] = 1
         for dlt, can in deleted_bibs_dict.items():
-            records_merged_bibcodes.append({"identifier": dlt,
-                                            "canonical_id": can,
-                                            "idtype": "deleted"})
+            if not merged.get(dlt, None):
+                records_merged_bibcodes.append({"identifier": dlt,
+                                                "canonical_id": can,
+                                                "idtype": "deleted"})
+                merged[dlt] = 1
         for oth, can in all_bibs_dict.items():
-            if can == "none":
-                records_merged_bibcodes.append({"identifier": oth,
-                                                "canonical_id": can,
-                                                "idtype": "noindex"})
-            else:
-                records_merged_bibcodes.append({"identifier": oth,
-                                                "canonical_id": can,
-                                                "idtype": "other"})
+            if not merged.get(oth, None):
+                if can == "none":
+                    records_merged_bibcodes.append({"identifier": oth,
+                                                    "canonical_id": can,
+                                                    "idtype": "noindex"})
+                else:
+                    records_merged_bibcodes.append({"identifier": oth,
+                                                    "canonical_id": can,
+                                                    "idtype": "other"})
+                merged[oth] = 1
+        merged = None
     except Exception as err:
         raise MergeClassicDataException("Unable to merge bibcodes lists: %s" % err)
     return records_merged_bibcodes
