@@ -64,7 +64,7 @@ def task_write_matched_record_to_db(record):
                                 matchtype=record[6],
                                 bibcode_meta=record[7],
                                 bibcode_classic=record[8])
-            session.insert(row).on_conflict_do_update()
+            session.saveorupdate(row)
             session.commit()
         except Exception as err:
             session.rollback()
