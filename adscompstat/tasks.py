@@ -28,7 +28,7 @@ app.conf.CELERY_QUEUES = (
 
 def task_clear_classic_data():
     with app.session_scope() as session:
-        try:            
+        try:
             session.query(identifier_doi).delete()
             session.query(alt_identifiers).delete()
             session.query(issn_bibstem).delete()
@@ -64,7 +64,7 @@ def task_process_logfile(infile):
     """
 
     batch_count = app.conf.get("RECORDS_PER_BATCH", 100)
-    try: 
+    try:
         files_to_process = utils.read_updateagent_log(infile)
         batch = []
         for xmlFile in files_to_process:
@@ -103,25 +103,22 @@ def _fetch_bibstem(record):
 
 @app.task(queue="parse-meta")
 def task_parse_meta(infile_batch):
+    """
+    Parses a batch of crossref xml files from the OAIPMH harvester into an
+    ingestDataModel object, and then extracts and reformats the records'
+    metadata into a format the classic matcher can interpret and store.
+    Batched output and failures are sent for matching or special handling.
+    """
+
     try:
         failures = []
         batch_out = []
-        bibgen = BibcodeGenerator()
         for infile in infile_batch:
             # For each metadata.xml file: parse it, try to make a bibcode,
             # and prep the result for task_classic_match
             try:
-                record = utils.parse_one_meta_xml(infile)
+                record = utils.process_one_meta_xml(infile)
                 if record:
-                    # try making a bibcode
-                    bibstem = _fetch_bibstem(record)
-                    if bibstem:
-                        bibcode = bibgen.make_bibcode(record, bibstem=bibstem)
-                        logger.debug("Got bibcode from %s: %s" % 
-                                         (infile, bibcode) )
-                    else:
-                        logger.debug("No bibcode from record %s" % infile)
-
                     # field the bib data parsed from the record into an
                     # processedRecord to be sent to task_match_with_classic
                     publication = record.get("publication", None)
@@ -140,30 +137,42 @@ def task_parse_meta(infile_batch):
                     else:
                         if publication:
                             pub_year = publication.get("pubYear", None)
+                            issns = publication.get('ISSN', None)
                         else:
                             pub_year = None
+                            issns = None
+                        issn_dict={}
+                        if issns:
+                            for item in issns:
+                                k = item['pubtype']
+                                v = item['issnString']
+                                if len(v) == 8:
+                                    v = v[0:4]+'-'+v[4:]
+                                issn_dict[k] = v
                         bib_data = {"publication": publication,
                                     "pagination": pagination,
                                     "persistentIDs": pids,
                                     "first_author": first_author,
                                     "title": title}
-                        processedRecord = {"harvest_filepath": infile,
+                        processedRecord = {"record": record,
+                                           "harvest_filepath": infile,
                                            "master_doi": doi,
-                                           "master_bibcode": bibcode,
+                                           "issns": issn_dict,
+                                           "master_bibcode": None,
                                            "master_bibdata": bib_data}
                         batch_out.append(processedRecord)
                 else:
-                    failures.append({"file": infile, 
+                    failures.append({"file": infile,
                                      "status": "parser failed"})
             except Exception as err:
-                failures.append({"file": infile, 
+                failures.append({"file": infile,
                                  "status": "error: %s" % err})
 
         # finish logging for the incoming batch
         batch_size = len(infile_batch)
         if failures:
            fail_size = len(failures)
-           logger.error("Failed records: %s of %s records failed in this batch." % (fail_size, batch_size))
+           logger.error("Parser failures: %s of %s records failed in this batch." % (fail_size, batch_size))
            logger.error("Failures: %s" % str(failures))
         else:
            logger.info("No (0) failed records in batch (%s)." % batch_size)
@@ -200,10 +209,19 @@ def task_match_with_classic(record_batch):
     try:
         failures = []
         matches = []
+        bibgen = BibcodeGenerator()
         for processedRecord in record_batch:
             try:
                 doi = processedRecord.get("master_doi", None)
-                bibcode = processedRecord.get("master_bibcode", None)
+                record = processedRecord.get("record", {})
+                infile = processedRecord.get("harvest_filepath", None)
+                bibstem = _fetch_bibstem(record)
+                if bibstem:
+                    bibcode = bibgen.make_bibcode(record, bibstem=bibstem)
+                    logger.debug("Got bibcode from %s: %s" %
+                                     (infile, bibcode) )
+                else:
+                    logger.debug("No bibcode from record %s" % infile)
                 (BibcodesDoi, BibcodesBib) = _fetch_classic_bibcodes(doi, bibcode)
             except Exception as err:
                 logger.error("Failed to get classic data for %s: %s" %
@@ -257,8 +275,3 @@ def task_match_with_classic(record_batch):
     except Exception as err:
         logger.error("Error matching record batch %s: %s" %
                          (record_batch, err))
-
-
-
-
-

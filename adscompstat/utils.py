@@ -57,7 +57,7 @@ def read_updateagent_log(logfile):
         return xmlfiles
 
 
-def parse_one_meta_xml(filename):
+def process_one_meta_xml(filename):
     try:
         record = dict()
         with open(filename,'r') as fx:
@@ -67,6 +67,8 @@ def parse_one_meta_xml(filename):
                 record = parser.parse(data)
             except Exception as err:
                 raise CrossRefParseException(err)
+            else:
+                if record:
         return record
     except Exception as err:
         raise ParseMetaXMLException(err)
@@ -97,7 +99,7 @@ def simple_parse_one_meta_xml(filename):
 # loading bibcode-doi and bibstem-issn data into postgres
 
 def load_classic_doi_bib_map(infile):
-    # Classic: DOI-bibcode mapping 
+    # Classic: DOI-bibcode mapping
     records_bib_doi = list()
     ignorecount = 0
     found_doi = dict()
@@ -107,7 +109,7 @@ def load_classic_doi_bib_map(infile):
                 try:
                     (bibcode, doi) = l.strip().split('\t')
                     if not found_doi.get(doi, None):
-                        records_bib_doi.append({"doi": doi, 
+                        records_bib_doi.append({"doi": doi,
                                                 "identifier": bibcode})
                         found_doi[doi] = 1
                     else:
@@ -136,7 +138,6 @@ def load_journalsdb_issn_bibstem_list(infile):
     except Exception as err:
         raise LoadIssnDataException('Unable to load bibstem-issn map: %s' % err)
     return records_issn_bibstem
-         
 
 
 def load_classic_canonical_list(infile):
