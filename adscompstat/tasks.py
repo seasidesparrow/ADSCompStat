@@ -55,7 +55,7 @@ def task_write_matched_record_to_db(record):
     with app.session_scope() as session:
         try:
             doi = record[1]
-            result = session.query(master.master_doi).filter_by(master_doi=doi).all()
+            result = session.query(master.master_doi).filter_by(master_doi=doi)
             if not result:
                 row = master(harvest_filepath=record[0],
                              master_doi=record[1],
@@ -70,7 +70,17 @@ def task_write_matched_record_to_db(record):
                 session.add(row)
                 session.commit()
             else:
-                result.update(row)
+                update = {"harvest_filepath":record[0],
+                          "master_doi":record[1],
+                          "issns": record[2],
+                          "db_origin": "Crossref",
+                          "master_bibdata": record[3],
+                          "classic_match": record[4],
+                          "status": record[5],
+                          "matchtype": record[6],
+                          "bibcode_meta": record[7],
+                          "bibcode_classic": record[8]}
+                session.query(master).filter_by(master_doi=doi).update(update)
                 session.commit()
         except Exception as err:
             session.rollback()
