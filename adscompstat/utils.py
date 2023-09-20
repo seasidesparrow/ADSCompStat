@@ -1,10 +1,18 @@
 import json
+import os
 import re
 from bs4 import BeautifulSoup
 from adscompstat.exceptions import *
 from adsingestp.parsers.crossref import CrossrefParser
 from adsingestp.parsers.base import BaseBeautifulSoupParser
 from glob import glob
+from adsputils import load_config, setup_logging
+
+proj_home = os.path.realpath(os.path.join(os.path.dirname(__file__), '../'))
+conf = load_config(proj_home=proj_home)
+logger = setup_logging('completeness-statistics-pipeline', proj_home=proj_home,
+                       level=conf.get('LOGGING_LEVEL', 'INFO'),
+                       attach_stdout=conf.get('LOG_STDOUT', False))
 
 re_issn = re.compile(r"^\d{4}-?\d{3}[0-9X]$")
 
@@ -49,24 +57,77 @@ def read_updateagent_log(logfile):
         return xmlfiles
 
 
-def parse_one_meta_xml(filename):
+def process_one_meta_xml(infile):
+    """
+    Parses a crossref xml file from the OAIPMH harvester into an
+    ingestDataModel object, and then extracts and reformats the record
+    metadata into a format the classic matcher can interpret and store.
+    """
+    processedRecord = {}
     try:
         record = dict()
-        with open(filename,'r') as fx:
+        with open(infile,'r') as fx:
             data = fx.read()
             try:
                 parser = CrossrefParser()
                 record = parser.parse(data)
             except Exception as err:
                 raise CrossRefParseException(err)
-        return record
+            else:
+                if record:
+                    # field the bib data parsed from the record into a
+                    # processedRecord to be sent to task_match_with_classic
+                    publication = record.get("publication", None)
+                    first_author = record.get("authors", [])[0]
+                    title = record.get("title", None)
+                    pagination = record.get("pagination", None)
+                    pids = record.get("persistentIDs", None)
+                    if pids:
+                        doi = None
+                        for pid in pids:
+                            if pid.get("DOI", None):
+                                doi = pid.get("DOI", None)
+                    if not doi:
+                        processedRecord = {"file": infile,
+                                           "status": "No DOI found"}
+                    else:
+                        if publication:
+                            pub_year = publication.get("pubYear", None)
+                            issns = publication.get('ISSN', None)
+                        else:
+                            pub_year = None
+                            issns = None
+                        issn_dict={}
+                        if issns:
+                            for item in issns:
+                                k = item['pubtype']
+                                v = item['issnString']
+                                if len(v) == 8:
+                                    v = v[0:4]+'-'+v[4:]
+                                issn_dict[k] = v
+                        bib_data = {"publication": publication,
+                                    "pagination": pagination,
+                                    "persistentIDs": pids,
+                                    "first_author": first_author,
+                                    "title": title}
+                        processedRecord = {"record": record,
+                                           "harvest_filepath": infile,
+                                           "master_doi": doi,
+                                           "issns": issn_dict,
+                                           "master_bibcode": None,
+                                           "master_bibdata": bib_data}
+                else:
+                    processedRecord = {"harvest_filepath": infile,
+                                       "status": "parser failed"}
     except Exception as err:
-        raise ParseMetaXMLException(err)
+        processedRecord = {"harvest_filepath": infile,
+                           "status": "error: %s" % err}
+    return processedRecord
 
 
-def simple_parse_one_meta_xml(filename):
+def simple_parse_one_meta_xml(infile):
     try:
-        with open(filename,'r') as fx:
+        with open(infile,'r') as fx:
             data = fx.read()
             try:
                 parser = BaseBeautifulSoupParser()
@@ -88,29 +149,32 @@ def simple_parse_one_meta_xml(filename):
 
 # loading bibcode-doi and bibstem-issn data into postgres
 
-def load_classic_doi_bib_dict(infile):
-    # Classic: DOI-bibcode mapping 
-    classic_bib_doi_dict = dict()
+def load_classic_doi_bib_map(infile):
+    # Classic: DOI-bibcode mapping
+    records_bib_doi = list()
     ignorecount = 0
+    found_doi = dict()
     try:
         with open(infile, 'r') as fa:
             for l in fa.readlines():
                 try:
                     (bibcode, doi) = l.strip().split('\t')
-                    if not classic_bib_doi_dict.get(doi, None):
-                        classic_bib_doi_dict[doi] = bibcode
+                    if not found_doi.get(doi, None):
+                        records_bib_doi.append({"doi": doi,
+                                                "identifier": bibcode})
+                        found_doi[doi] = 1
                     else:
-                        ignorecount += 1
+                        logger.debug("Duplicate doi detected: (%s, %s)" %
+                                          (bibcode, doi))
                 except Exception as err:
-                    # logger.debug("bad line in %s: %s" % (infile, l.strip()))
-                    pass
+                    logger.warning("bad line in %s: %s" % (infile, err))
+        found_doi = None
     except Exception as err:
         raise LoadClassicDataException("Unable to load classic dois and bibcodes! %s" % err)
-    print('%s records ignored.' % str(ignorecount))
-    return classic_bib_doi_dict
+    return records_bib_doi
 
 def load_journalsdb_issn_bibstem_list(infile):
-    issn_bibstem_list = list()
+    records_issn_bibstem = list()
     issn_dups = dict()
     try:
         with open(infile, 'r') as fi:
@@ -118,13 +182,13 @@ def load_journalsdb_issn_bibstem_list(infile):
                 (bibstem, issntype, issn) = l.strip().split('\t')
                 if not issn_dups.get(issn, None):
                     issn_dups[issn] = 1
-                    issn_bibstem_list.append({'issn': issn, 'bibstem': bibstem, 'issn_type': issntype})
+                    records_issn_bibstem.append({'issn': issn,
+                                                 'bibstem': bibstem,                                                             'issn_type': issntype})
                 else:
-                    print("Warning: ISSN %s is a duplicate!" % issn)
+                    logger.debug("ISSN %s is a duplicate!" % issn)
     except Exception as err:
         raise LoadIssnDataException('Unable to load bibstem-issn map: %s' % err)
-    return issn_bibstem_list
-         
+    return records_issn_bibstem
 
 
 def load_classic_canonical_list(infile):
@@ -164,36 +228,52 @@ def load_classic_noncanonical_bibs(bibfile):
 
 
 def merge_bibcode_lists(canonicalfile, alternatefile, deletedfile, allfile):
-    merged_bibcodes = {}
+    records_merged_bibcodes = list()
     try:
         canonical_bibs_list = load_classic_canonical_list(canonicalfile)
         alternate_bibs_dict = load_classic_noncanonical_bibs(alternatefile)
         deleted_bibs_dict = load_classic_noncanonical_bibs(deletedfile)
         all_bibs_dict = load_classic_noncanonical_bibs(allfile)
+        merged = dict()
         for can in canonical_bibs_list:
-            if not merged_bibcodes.get(can, None):
-                merged_bibcodes[can] = {'canonical_id': can, 'idtype': 'canonical'}
+            if not merged.get(can, None):
+                records_merged_bibcodes.append({"identifier": can,
+                                                "canonical_id": can,
+                                                "idtype": "canonical"})
+                merged[can] = 1
         for alt, can in alternate_bibs_dict.items():
-            if not merged_bibcodes.get(alt, None):
-                merged_bibcodes[alt] = {'canonical_id': can, 'idtype': 'alternate'}
+            if not merged.get(alt, None):
+                records_merged_bibcodes.append({"identifier": alt,
+                                                "canonical_id": can,
+                                                "idtype": "alternate"})
+                merged[alt] = 1
         for dlt, can in deleted_bibs_dict.items():
-            if not merged_bibcodes.get(dlt, None):
-                merged_bibcodes[dlt] = {'canonical_id': can, 'idtype': 'deleted'}
+            if not merged.get(dlt, None):
+                records_merged_bibcodes.append({"identifier": dlt,
+                                                "canonical_id": can,
+                                                "idtype": "deleted"})
+                merged[dlt] = 1
         for oth, can in all_bibs_dict.items():
-            if not merged_bibcodes.get(oth, None):
-                if can == 'none':
-                    merged_bibcodes[oth] = {'canonical_id': can, 'idtype': 'noindex'}
+            if not merged.get(oth, None):
+                if can == "none":
+                    records_merged_bibcodes.append({"identifier": oth,
+                                                    "canonical_id": can,
+                                                    "idtype": "noindex"})
                 else:
-                    merged_bibcodes[oth] = {'canonical_id': can, 'idtype': 'other'}
+                    records_merged_bibcodes.append({"identifier": oth,
+                                                    "canonical_id": can,
+                                                    "idtype": "other"})
+                merged[oth] = 1
+        merged = None
     except Exception as err:
         raise MergeClassicDataException("Unable to merge bibcodes lists: %s" % err)
-    return merged_bibcodes
+    return records_merged_bibcodes
 
 
 def get_completeness_fraction(byVolumeData):
     totals = dict()
-    matches = ['canonical','partial','alternate','deleted']
-    unmatches = ['mismatch','unmatched']
+    matches = ["canonical","partial","alternate","deleted"]
+    unmatches = ["mismatch","unmatched"]
     totalMatch = 0
     totalUnmatch = 0
     totalNoIndex = 0
