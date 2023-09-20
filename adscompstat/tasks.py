@@ -54,8 +54,21 @@ def task_write_block_to_db(table, datablock):
 def task_write_matched_record_to_db(record):
     with app.session_scope() as session:
         try:
-            print('lol')
+            row = master(harvest_filepath=inrec[0],
+                                master_doi=inrec[1],
+                                issns=inrec[2],
+                                db_origin='Crossref',
+                                master_bibdata=inrec[3],
+                                classic_match=inrec[4],
+                                status=inrec[5],
+                                matchtype=inrec[6],
+                                bibcode_meta=inrec[7],
+                                bibcode_classic=inrec[8])
+            session.insert(row).on_conflict_do_update()
+            session.commit()
         except Exception as err:
+            session.rollback()
+            session.flush()
             logger.error("Error: %s; Record: %s" % (err, record))
 
 
@@ -249,7 +262,7 @@ def task_process_meta(infile_batch):
                                          classic_bibcode,
                                          str(err))
             if matchedRecord:
-                task_write_matched_record_to_db.delay(matchedRecord)
+                task_write_matched_record_to_db(matchedRecord)
             else:
                 logger.error("No matchedRecord generated for %s!" % infile)
     except Exception as err:
