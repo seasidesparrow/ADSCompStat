@@ -21,7 +21,7 @@ app.conf.CELERY_QUEUES = (
     Queue("get-logfiles", app.exchange, routing_key="get-logfiles"),
     Queue("parse-meta", app.exchange, routing_key="parse-meta"),
     Queue("match-classic", app.exchange, routing_key="match-classic"),
-    # Queue("write-db", app.exchange, routing_key="write-db"),
+    Queue("write-db", app.exchange, routing_key="write-db"),
     # Queue("compute-stats", app.exchange, routing_key="compute-stats"),
 )
 
@@ -50,12 +50,20 @@ def task_write_block_to_db(table, datablock):
             session.commit()
             logger.error("Failed to write data block: %s" % err)
 
+@app.task(queue="write-db")
+def task_write_matched_record_to_db(record):
+    with app.session_scope() as session:
+        try:
+            print('lol')
+        except Exception as err:
+            logger.error("Error: %s; Record: %s" % (err, record))
+
 
 @app.task(queue="get-logfiles")
 def task_process_logfile(infile):
     """
     Parse one oaipmh harvesting logfile to retrieve newly downloaded records,
-    and forward batches of those records to task_parse_meta().  The filename
+    and forward batches of those records to task_process_meta().  The filename
     in the logfile assumes the same HARVEST_BASE_DIR as the logfiles
     themselves, and prepends the full path to the relative path in the file.
 
@@ -71,12 +79,12 @@ def task_process_logfile(infile):
             xmlFilePath = app.conf.get("HARVEST_BASE_DIR", "/") + xmlFile
             batch.append(xmlFilePath)
             if len(batch) == batch_count:
-                logger.debug("Calling task_parse_meta with batch '%s'" % batch)
-                task_parse_meta(batch)
+                logger.debug("Calling task_process_meta with batch '%s'" % batch)
+                task_process_meta(batch)
                 batch = []
         if len(batch):
-            logger.debug("Calling task_parse_meta with batch '%s'" % batch)
-            task_parse_meta(batch)
+            logger.debug("Calling task_process_meta with batch '%s'" % batch)
+            task_process_meta(batch)
     except Exception as err:
         logger.error("Error processing logfile %s: %s" % (infile, err))
 
@@ -85,10 +93,10 @@ def db_query_bibstem(record):
     try:
         with app.session_scope() as session:
             issn_list = record.get("publication", {}).get("ISSN", [])
-            bibstem = None
+            bibstem = ""
             for issn in issn_list:
                 if not bibstem:
-                    issnString = issn.get("issnString", None)
+                    issnString = issn.get("issnString", "")
                     if issnString:
                         try:
                             bibstem_result = session.query(issn_bibstem.bibstem).filter(issn_bibstem.issn==issnString).first()
@@ -128,21 +136,21 @@ def task_process_meta(infile_batch):
     try:
         bibgen = BibcodeGenerator()
         for infile in infile_batch:
-            matchedRecord = None
+            matchedRecord = ""
             # For each metadata.xml file: parse it, try to make a bibcode,
             # and prep the result for task_classic_match
             try:
                 processedRecord = utils.process_one_meta_xml(infile)
             except Exception as err:
                 logger.error("Parsing failed for %s: %s" % (infile, err))
-                doi = None
+                doi = ""
                 issns = json.dumps({})
                 bibdata = json.dumps({})
                 match = json.dumps({})
                 status = "Failed"
                 matchtype = "failed"
-                bibcode = None
-                classic_bibcode = None
+                bibcode = ""
+                classic_bibcode = ""
                 matchedRecord = (infile,
                                  doi,
                                  issns,
@@ -154,18 +162,18 @@ def task_process_meta(infile_batch):
                                  classic_bibcode,
                                  str(err))
             else:
-                parsestatus = processedRecord.get("status", None)
+                parsestatus = processedRecord.get("status", "")
                 # If there's a status field, it means processing failed and
                 # you need to write a placeholder record for the file.
                 if parsestatus:
-                    doi = processedRecord.get("master_doi", None)
+                    doi = processedRecord.get("master_doi", "")
                     issns = json.dumps(processedRecord.get("issns", {}))
                     bibdata = json.dumps(processedRecord.get("master_bibdata", {}))
                     match = json.dumps({})
                     status = "Failed"
                     matchtype = "failed"
-                    bibcode = None
-                    classic_bibcode = None
+                    bibcode = ""
+                    classic_bibcode = ""
                     matchedRecord = (infile,
                                      doi,
                                      issns,
@@ -178,18 +186,18 @@ def task_process_meta(infile_batch):
                                      parsestatus)
                 else:
                     try:
-                        ingestRecord = processedRecord.get("record", None)
+                        ingestRecord = processedRecord.get("record", "")
                         bibstem = db_query_bibstem(ingestRecord)
                         bibcode = bibgen.make_bibcode(ingestRecord,
                                                       bibstem=bibstem)
-                        doi = processedRecord.get("master_doi", None)
+                        doi = processedRecord.get("master_doi", "")
                         (bibcodesFromDoi, bibcodesFromBib) = db_query_classic_bibcodes(doi, bibcode)
                         xmatch = CrossrefMatcher()
                         xmatchResult = xmatch.match(bibcode,
-                                                    BibcodesFromDoi,
-                                                    BibcodesFromBib)
+                                                    bibcodesFromDoi,
+                                                    bibcodesFromBib)
                         if xmatchResult:
-                            matchtype = xmatchResult.get("match", None)
+                            matchtype = xmatchResult.get("match", "")
                             if matchtype in ["canonical", "deleted", "alternate", "partial", "other", "mismatch"]:
                                 status = "Matched"
                             else:
@@ -197,12 +205,12 @@ def task_process_meta(infile_batch):
                             if matchtype == "Classic Canonical Bibcode":
                                 matchtype = "other"
                             classic_match = xmatchResult.get("errs", {})
-                            classic_bibcode = xmatchResult.get("bibcode", None)
+                            classic_bibcode = xmatchResult.get("bibcode", "")
                         else:
                             status="NoIndex"
                             matchtype = "other"
                             classic_match = {}
-                            classic_bibcode = None
+                            classic_bibcode = ""
 
                         # create a postgres-ready record with matching result
                         # for the record in infile
@@ -219,17 +227,17 @@ def task_process_meta(infile_batch):
                                          matchtype,
                                          bibcode,
                                          classic_bibcode,
-                                         None)
+                                         "")
                     except Exception as err:
                         logger.error("Crossref matching failed for %s: %s" % (infile, err))
-                        doi = processedRecord.get("master_doi", None)
+                        doi = processedRecord.get("master_doi", "")
                         issns = json.dumps(processedRecord.get("issns", {}))
                         bibdata = json.dumps(processedRecord.get("master_bibdata", {}))
                         match = json.dumps({})
                         status = "Failed"
                         matchtype = "failed"
-                        bibcode = None
-                        classic_bibcode = None
+                        bibcode = ""
+                        classic_bibcode = ""
                         matchedRecord = (infile,
                                          doi,
                                          issns,

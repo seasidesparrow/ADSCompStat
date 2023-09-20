@@ -57,7 +57,7 @@ def read_updateagent_log(logfile):
         return xmlfiles
 
 
-def process_one_meta_xml(filename):
+def process_one_meta_xml(infile):
     """
     Parses a crossref xml file from the OAIPMH harvester into an
     ingestDataModel object, and then extracts and reformats the record
@@ -66,7 +66,7 @@ def process_one_meta_xml(filename):
     processedRecord = {}
     try:
         record = dict()
-        with open(filename,'r') as fx:
+        with open(infile,'r') as fx:
             data = fx.read()
             try:
                 parser = CrossrefParser()
@@ -89,7 +89,7 @@ def process_one_meta_xml(filename):
                                 doi = pid.get("DOI", None)
                     if not doi:
                         processedRecord = {"file": infile,
-                                           "status": "No DOI found"})
+                                           "status": "No DOI found"}
                     else:
                         if publication:
                             pub_year = publication.get("pubYear", None)
@@ -125,9 +125,9 @@ def process_one_meta_xml(filename):
     return processedRecord
 
 
-def simple_parse_one_meta_xml(filename):
+def simple_parse_one_meta_xml(infile):
     try:
-        with open(filename,'r') as fx:
+        with open(infile,'r') as fx:
             data = fx.read()
             try:
                 parser = BaseBeautifulSoupParser()
