@@ -54,16 +54,16 @@ def task_write_block_to_db(table, datablock):
 def task_write_matched_record_to_db(record):
     with app.session_scope() as session:
         try:
-            row = master(harvest_filepath=inrec[0],
-                                master_doi=inrec[1],
-                                issns=inrec[2],
+            row = master(harvest_filepath=record[0],
+                                master_doi=record[1],
+                                issns=record[2],
                                 db_origin='Crossref',
-                                master_bibdata=inrec[3],
-                                classic_match=inrec[4],
-                                status=inrec[5],
-                                matchtype=inrec[6],
-                                bibcode_meta=inrec[7],
-                                bibcode_classic=inrec[8])
+                                master_bibdata=record[3],
+                                classic_match=record[4],
+                                status=record[5],
+                                matchtype=record[6],
+                                bibcode_meta=record[7],
+                                bibcode_classic=record[8])
             session.insert(row).on_conflict_do_update()
             session.commit()
         except Exception as err:
