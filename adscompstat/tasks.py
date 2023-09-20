@@ -11,7 +11,7 @@ from adscompstat import utils
 from adsenrich.bibcodes import BibcodeGenerator
 from adscompstat.match import CrossrefMatcher
 from adscompstat.exceptions import *
-from sqlalchemy import func
+from sqlalchemy import insert, func
 
 proj_home = os.path.realpath(os.path.join(os.path.dirname(__file__), "../"))
 app = app_module.ADSCompStatCelery("completeness-statistics-pipeline", proj_home=proj_home, config=globals().get("config", {}), local_config=globals().get("local_config", {}))
@@ -64,7 +64,7 @@ def task_write_matched_record_to_db(record):
                                 matchtype=record[6],
                                 bibcode_meta=record[7],
                                 bibcode_classic=record[8])
-            session.add(row).on_conflict_do_update()
+            session.insert(row).on_conflict_do_update()
             session.commit()
         except Exception as err:
             session.rollback()
