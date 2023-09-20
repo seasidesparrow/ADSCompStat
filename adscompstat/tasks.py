@@ -81,7 +81,7 @@ def task_process_logfile(infile):
         logger.error("Error processing logfile %s: %s" % (infile, err))
 
 
-def _fetch_bibstem(record):
+def db_query_bibstem(record):
     try:
         with app.session_scope() as session:
             issn_list = record.get("publication", {}).get("ISSN", [])
@@ -101,8 +101,23 @@ def _fetch_bibstem(record):
     else:
         return bibstem
 
+
+def db_query_classic_bibcodes(doi, bibcode):
+    try:
+        bibcodesFromDoi = []
+        bibcodesFromBib = []
+        with app.session_scope() as session:
+            bibcodesFromDoi = session.query(alt_identifiers.identifier, alt_identifiers.canonical_id, alt_identifiers.idtype).join(identifier_doi, alt_identifiers.canonical_id == identifier_doi.identifier).filter(identifier_doi.doi == doi).all()
+        if bibcode:
+            bibcodesFromBib = session.query(alt_identifiers.identifier, alt_identifiers.canonical_id, alt_identifiers.idtype).filter(alt_identifiers.identifier == bibcode).all()
+    except Exception as err:
+        raise FetchClassicBibException(err)
+    else:
+        return bibcodesFromDoi, bibcodesFromBib
+
+
 @app.task(queue="parse-meta")
-def task_parse_meta(infile_batch):
+def task_process_meta(infile_batch):
     """
     Parses a batch of crossref xml files from the OAIPMH harvester into an
     ingestDataModel object, and then extracts and reformats the records'
@@ -111,167 +126,123 @@ def task_parse_meta(infile_batch):
     """
 
     try:
-        failures = []
-        batch_out = []
+        bibgen = BibcodeGenerator()
         for infile in infile_batch:
+            matchedRecord = None
             # For each metadata.xml file: parse it, try to make a bibcode,
             # and prep the result for task_classic_match
             try:
-                record = utils.process_one_meta_xml(infile)
-                if record:
-                    # field the bib data parsed from the record into an
-                    # processedRecord to be sent to task_match_with_classic
-                    publication = record.get("publication", None)
-                    first_author = record.get("authors", [])[0]
-                    title = record.get("title", None)
-                    pagination = record.get("pagination", None)
-                    pids = record.get("persistentIDs", None)
-                    if pids:
-                        doi = None
-                        for pid in pids:
-                            if pid.get("DOI", None):
-                                doi = pid.get("DOI", None)
-                    if not doi:
-                        failures.append({"file": infile,
-                                         "status": "No DOI found"})
-                    else:
-                        if publication:
-                            pub_year = publication.get("pubYear", None)
-                            issns = publication.get('ISSN', None)
-                        else:
-                            pub_year = None
-                            issns = None
-                        issn_dict={}
-                        if issns:
-                            for item in issns:
-                                k = item['pubtype']
-                                v = item['issnString']
-                                if len(v) == 8:
-                                    v = v[0:4]+'-'+v[4:]
-                                issn_dict[k] = v
-                        bib_data = {"publication": publication,
-                                    "pagination": pagination,
-                                    "persistentIDs": pids,
-                                    "first_author": first_author,
-                                    "title": title}
-                        processedRecord = {"record": record,
-                                           "harvest_filepath": infile,
-                                           "master_doi": doi,
-                                           "issns": issn_dict,
-                                           "master_bibcode": None,
-                                           "master_bibdata": bib_data}
-                        batch_out.append(processedRecord)
-                else:
-                    failures.append({"file": infile,
-                                     "status": "parser failed"})
+                processedRecord = utils.process_one_meta_xml(infile)
             except Exception as err:
-                failures.append({"file": infile,
-                                 "status": "error: %s" % err})
-
-        # finish logging for the incoming batch
-        batch_size = len(infile_batch)
-        if failures:
-           fail_size = len(failures)
-           logger.error("Parser failures: %s of %s records failed in this batch." % (fail_size, batch_size))
-           logger.error("Failures: %s" % str(failures))
-        else:
-           logger.info("No (0) failed records in batch (%s)." % batch_size)
-
-        # forward the successfully parsed records
-        if batch_out:
-            logger.info("Forwarding %s records to match_with_classic" %
-                            len(batch_out))
-            task_match_with_classic.delay(batch_out)
-        else:
-            logger.error("No records to match from this batch: %s" %
-                               infile_batch)
-    except Exception as err:
-        logger.error("Error processing record batch %s: %s" %
-                         (infile_batch, err))
-
-
-def _fetch_classic_bibcodes(doi, bibcode):
-    try:
-        bibcodesFromXDoi = []
-        bibcodesFromXBib = []
-        with app.session_scope() as session:
-            bibcodesFromXDoi = session.query(alt_identifiers.identifier, alt_identifiers.canonical_id, alt_identifiers.idtype).join(identifier_doi, alt_identifiers.canonical_id == identifier_doi.identifier).filter(identifier_doi.doi == doi).all()
-        if bibcode:
-            bibcodesFromXBib = session.query(alt_identifiers.identifier, alt_identifiers.canonical_id, alt_identifiers.idtype).filter(alt_identifiers.identifier == bibcode).all()
-    except Exception as err:
-        raise FetchClassicBibException(err)
-    else:
-        return bibcodesFromXDoi, bibcodesFromXBib
-
-
-@app.task(queue="match-classic")
-def task_match_with_classic(record_batch):
-    try:
-        failures = []
-        matches = []
-        bibgen = BibcodeGenerator()
-        for processedRecord in record_batch:
-            try:
-                doi = processedRecord.get("master_doi", None)
-                record = processedRecord.get("record", {})
-                infile = processedRecord.get("harvest_filepath", None)
-                bibstem = _fetch_bibstem(record)
-                if bibstem:
-                    bibcode = bibgen.make_bibcode(record, bibstem=bibstem)
-                    logger.debug("Got bibcode from %s: %s" %
-                                     (infile, bibcode) )
-                else:
-                    logger.debug("No bibcode from record %s" % infile)
-                (BibcodesDoi, BibcodesBib) = _fetch_classic_bibcodes(doi, bibcode)
-            except Exception as err:
-                logger.error("Failed to get classic data for %s: %s" %
-                                 (processedRecord, err))
-            else:
-                xmatch = CrossrefMatcher()
-                xmatchResult = xmatch.match(bibcode,
-                                            BibcodesDoi,
-                                            BibcodesBib)
-                if xmatchResult:
-                    matchtype = xmatchResult.get("match", None)
-                    if matchtype in ["canonical", "deleted", "alternate", "partial", "other", "mismatch"]:
-                        status = "Matched"
-                    else:
-                        status = "Unmatched"
-                    if matchtype == "Classic Canonical Bibcode":
-                        matchtype = "other"
-                    classic_match = xmatchResult.get("errs", {})
-                    classic_bibcode = xmatchResult.get("bibcode", None)
-                else:
-                    status="NoIndex"
-                    matchtype = "other"
-                    classic_match = {}
-                    classic_bibcode = None
-
-                harvest_filepath = processedRecord.get("harvest_filepath", None)
-                recBibcode = processedRecord.get("bibcode", None)
-                master_doi = processedRecord.get("master_doi", None)
-                if type(classic_match) == dict:
-                    classic_match = json.dumps(classic_match)
-                issns = processedRecord.get("issns", {})
-                if type(issns) == dict:
-                    issns = json.dumps(issns)
-                master_bibdata = processedRecord.get("master_bibdata", {})
-                if type(master_bibdata) == dict:
-                    master_bibdata = json.dumps(master_bibdata)
-                matchedRecord = (harvest_filepath,
-                                 master_doi,
+                logger.error("Parsing failed for %s: %s" % (infile, err))
+                doi = None
+                issns = json.dumps({})
+                bibdata = json.dumps({})
+                match = json.dumps({})
+                status = "Failed"
+                matchtype = "failed"
+                bibcode = None
+                classic_bibcode = None
+                matchedRecord = (infile,
+                                 doi,
                                  issns,
-                                 master_bibdata,
-                                 classic_match,
+                                 bibdata,
+                                 match,
                                  status,
                                  matchtype,
-                                 recBibcode,
-                                 classic_bibcode)
-                matches.append(matchedRecord)
+                                 bibcode,
+                                 classic_bibcode,
+                                 str(err))
+            else:
+                parsestatus = processedRecord.get("status", None)
+                # If there's a status field, it means processing failed and
+                # you need to write a placeholder record for the file.
+                if parsestatus:
+                    doi = processedRecord.get("master_doi", None)
+                    issns = json.dumps(processedRecord.get("issns", {}))
+                    bibdata = json.dumps(processedRecord.get("master_bibdata", {}))
+                    match = json.dumps({})
+                    status = "Failed"
+                    matchtype = "failed"
+                    bibcode = None
+                    classic_bibcode = None
+                    matchedRecord = (infile,
+                                     doi,
+                                     issns,
+                                     bibdata,
+                                     match,
+                                     status,
+                                     matchtype,
+                                     bibcode,
+                                     classic_bibcode,
+                                     parsestatus)
+                else:
+                    try:
+                        ingestRecord = processedRecord.get("record", None)
+                        bibstem = db_query_bibstem(ingestRecord)
+                        bibcode = bibgen.make_bibcode(ingestRecord,
+                                                      bibstem=bibstem)
+                        doi = processedRecord.get("master_doi", None)
+                        (bibcodesFromDoi, bibcodesFromBib) = db_query_classic_bibcodes(doi, bibcode)
+                        xmatch = CrossrefMatcher()
+                        xmatchResult = xmatch.match(bibcode,
+                                                    BibcodesFromDoi,
+                                                    BibcodesFromBib)
+                        if xmatchResult:
+                            matchtype = xmatchResult.get("match", None)
+                            if matchtype in ["canonical", "deleted", "alternate", "partial", "other", "mismatch"]:
+                                status = "Matched"
+                            else:
+                                status = "Unmatched"
+                            if matchtype == "Classic Canonical Bibcode":
+                                matchtype = "other"
+                            classic_match = xmatchResult.get("errs", {})
+                            classic_bibcode = xmatchResult.get("bibcode", None)
+                        else:
+                            status="NoIndex"
+                            matchtype = "other"
+                            classic_match = {}
+                            classic_bibcode = None
 
-            if matches:
-                task_write_results_to_master.delay(matches)
+                        # create a postgres-ready record with matching result
+                        # for the record in infile
+                        issns = json.dumps(processedRecord.get("issns", {}))
+                        bibdata = json.dumps(processedRecord.get("master_bibdata", {}))
+                        match = json.dumps(classic_match)
 
+                        matchedRecord = (infile,
+                                         doi,
+                                         issns,
+                                         bibdata,
+                                         match,
+                                         status,
+                                         matchtype,
+                                         bibcode,
+                                         classic_bibcode,
+                                         None)
+                    except Exception as err:
+                        logger.error("Crossref matching failed for %s: %s" % (infile, err))
+                        doi = processedRecord.get("master_doi", None)
+                        issns = json.dumps(processedRecord.get("issns", {}))
+                        bibdata = json.dumps(processedRecord.get("master_bibdata", {}))
+                        match = json.dumps({})
+                        status = "Failed"
+                        matchtype = "failed"
+                        bibcode = None
+                        classic_bibcode = None
+                        matchedRecord = (infile,
+                                         doi,
+                                         issns,
+                                         bibdata,
+                                         match,
+                                         status,
+                                         matchtype,
+                                         bibcode,
+                                         classic_bibcode,
+                                         str(err))
+            if matchedRecord:
+                task_write_matched_record_to_db.delay(matchedRecord)
+            else:
+                logger.error("No matchedRecord generated for %s!" % infile)
     except Exception as err:
-        logger.error("Error matching record batch %s: %s" %
-                         (record_batch, err))
+        logger.error("Record batch failed for %s: %s" % (infile_batch, err))

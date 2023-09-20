@@ -58,6 +58,12 @@ def read_updateagent_log(logfile):
 
 
 def process_one_meta_xml(filename):
+    """
+    Parses a crossref xml file from the OAIPMH harvester into an
+    ingestDataModel object, and then extracts and reformats the record
+    metadata into a format the classic matcher can interpret and store.
+    """
+    processedRecord = {}
     try:
         record = dict()
         with open(filename,'r') as fx:
@@ -69,9 +75,54 @@ def process_one_meta_xml(filename):
                 raise CrossRefParseException(err)
             else:
                 if record:
-        return record
+                    # field the bib data parsed from the record into a
+                    # processedRecord to be sent to task_match_with_classic
+                    publication = record.get("publication", None)
+                    first_author = record.get("authors", [])[0]
+                    title = record.get("title", None)
+                    pagination = record.get("pagination", None)
+                    pids = record.get("persistentIDs", None)
+                    if pids:
+                        doi = None
+                        for pid in pids:
+                            if pid.get("DOI", None):
+                                doi = pid.get("DOI", None)
+                    if not doi:
+                        processedRecord = {"file": infile,
+                                           "status": "No DOI found"})
+                    else:
+                        if publication:
+                            pub_year = publication.get("pubYear", None)
+                            issns = publication.get('ISSN', None)
+                        else:
+                            pub_year = None
+                            issns = None
+                        issn_dict={}
+                        if issns:
+                            for item in issns:
+                                k = item['pubtype']
+                                v = item['issnString']
+                                if len(v) == 8:
+                                    v = v[0:4]+'-'+v[4:]
+                                issn_dict[k] = v
+                        bib_data = {"publication": publication,
+                                    "pagination": pagination,
+                                    "persistentIDs": pids,
+                                    "first_author": first_author,
+                                    "title": title}
+                        processedRecord = {"record": record,
+                                           "harvest_filepath": infile,
+                                           "master_doi": doi,
+                                           "issns": issn_dict,
+                                           "master_bibcode": None,
+                                           "master_bibdata": bib_data}
+                else:
+                    processedRecord = {"harvest_filepath": infile,
+                                       "status": "parser failed"}
     except Exception as err:
-        raise ParseMetaXMLException(err)
+        processedRecord = {"harvest_filepath": infile,
+                           "status": "error: %s" % err}
+    return processedRecord
 
 
 def simple_parse_one_meta_xml(filename):
