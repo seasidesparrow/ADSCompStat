@@ -11,7 +11,7 @@ from adscompstat import utils
 from adsenrich.bibcodes import BibcodeGenerator
 from adscompstat.match import CrossrefMatcher
 from adscompstat.exceptions import *
-from sqlalchemy import insert, func
+from sqlalchemy import func
 
 proj_home = os.path.realpath(os.path.join(os.path.dirname(__file__), "../"))
 app = app_module.ADSCompStatCelery("completeness-statistics-pipeline", proj_home=proj_home, config=globals().get("config", {}), local_config=globals().get("local_config", {}))
@@ -20,8 +20,8 @@ logger = app.logger
 app.conf.CELERY_QUEUES = (
     Queue("get-logfiles", app.exchange, routing_key="get-logfiles"),
     Queue("parse-meta", app.exchange, routing_key="parse-meta"),
-    Queue("match-classic", app.exchange, routing_key="match-classic"),
-    Queue("write-db", app.exchange, routing_key="write-db"),
+    Queue("write-db", app.exchange, routing_key="write-db")
+    # Queue("match-classic", app.exchange, routing_key="match-classic"),
     # Queue("compute-stats", app.exchange, routing_key="compute-stats"),
 )
 
@@ -55,7 +55,7 @@ def task_write_matched_record_to_db(record):
     with app.session_scope() as session:
         try:
             doi = record[1]
-            result = session.query(master.master_doi).filter_by(master_doi=doi)
+            result = session.query(master.master_doi).filter_by(master_doi=doi).all()
             if not result:
                 row = master(harvest_filepath=record[0],
                              master_doi=record[1],
