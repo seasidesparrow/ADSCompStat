@@ -163,7 +163,7 @@ def main():
                 print("No logfiles, nothing to do. Stopping.")
             else:
                 for lf in logfiles:
-                    tasks.task_process_logfile(lf)
+                    tasks.task_process_logfile.delay(lf)
     except Exception as err:
         # logger.warn("Completeness processing failed: %s" % err)
         print("Completeness processing failed: %s" % err)

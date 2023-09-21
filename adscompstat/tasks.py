@@ -20,9 +20,8 @@ logger = app.logger
 app.conf.CELERY_QUEUES = (
     Queue("get-logfiles", app.exchange, routing_key="get-logfiles"),
     Queue("parse-meta", app.exchange, routing_key="parse-meta"),
-    Queue("write-db", app.exchange, routing_key="write-db")
-    # Queue("match-classic", app.exchange, routing_key="match-classic"),
-    # Queue("compute-stats", app.exchange, routing_key="compute-stats"),
+    Queue("write-db", app.exchange, routing_key="write-db"),
+    Queue("compute-stats", app.exchange, routing_key="compute-stats")
 )
 
 
@@ -40,6 +39,7 @@ def task_clear_classic_data():
             logger.error("Failed to clear classic data tables: %s" % err)
 
 
+@app.task(queue="write-db", serializer="pickle")
 def task_write_block_to_db(table, datablock):
     with app.session_scope() as session:
         try:
@@ -109,11 +109,11 @@ def task_process_logfile(infile):
             batch.append(xmlFilePath)
             if len(batch) == batch_count:
                 logger.debug("Calling task_process_meta with batch '%s'" % batch)
-                task_process_meta(batch)
+                task_process_meta.delay(batch)
                 batch = []
         if len(batch):
             logger.debug("Calling task_process_meta with batch '%s'" % batch)
-            task_process_meta(batch)
+            task_process_meta.delay(batch)
     except Exception as err:
         logger.error("Error processing logfile %s: %s" % (infile, err))
 
@@ -127,6 +127,8 @@ def db_query_bibstem(record):
                 if not bibstem:
                     issnString = issn.get("issnString", "")
                     if issnString:
+                        if len(issnString) == 8:
+                            issnString = issnString[0:4]+"-"+issnString[4:]
                         try:
                             bibstem_result = session.query(issn_bibstem.bibstem).filter(issn_bibstem.issn==issnString).first()
                             if bibstem_result:
@@ -278,7 +280,7 @@ def task_process_meta(infile_batch):
                                          classic_bibcode,
                                          str(err))
             if matchedRecord:
-                task_write_matched_record_to_db(matchedRecord)
+                task_write_matched_record_to_db.delay(matchedRecord)
             else:
                 logger.error("No matchedRecord generated for %s!" % infile)
     except Exception as err:
