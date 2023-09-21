@@ -46,11 +46,9 @@ def upgrade():
                               nullable=False),
                     sa.Column('bibcode_meta', sa.String(), nullable=True),
                     sa.Column('bibcode_classic', sa.String(), nullable=True),
-                    sa.Column('notes', sa.String(), nullable=True)
-                    sa.Column('created', UTCDateTime, nullable=True,
-                              default=get_date),
-                    sa.Column('updated', UTCDateTime, nullable=True,
-                              onupdate=get_date),
+                    sa.Column('notes', sa.String(), nullable=True),
+                    sa.Column('created', UTCDateTime, nullable=True, default=get_date),
+                    sa.Column('updated', UTCDateTime, nullable=True, onupdate=get_date),
                     sa.PrimaryKeyConstraint('masterid'),
                     sa.UniqueConstraint('master_doi'),
                     sa.UniqueConstraint('masterid'))

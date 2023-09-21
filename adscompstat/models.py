@@ -13,8 +13,20 @@ Base = declarative_base()
 class CompStatMaster(Base):
     __tablename__ = 'master'
 
-    match_status = ENUM('Matched', 'Unmatched', 'NoIndex', name='match_status')
-    match_type = ENUM('canonical', 'deleted', 'alternate', 'partial', 'mismatch', 'unmatched', 'other', name='match_type')
+    match_status = ENUM('Matched',
+                        'Unmatched',
+                        'NoIndex',
+                        'Failed',
+                        name='match_status')
+    match_type = ENUM('canonical',
+                      'deleted',
+                      'alternate',
+                      'partial',
+                      'mismatch',
+                      'unmatched',
+                      'other',
+                      'failed',
+                      name='match_type')
 
     masterid = Column(Integer, primary_key=True, unique=True)
     harvest_filepath = Column(String, nullable=False)
@@ -27,6 +39,7 @@ class CompStatMaster(Base):
     matchtype = Column(match_type, nullable=False)
     bibcode_meta = Column(String, nullable=True)
     bibcode_classic = Column(String, nullable=True)
+    notes = Column(String, nullable=True)
     created = Column(UTCDateTime, default=get_date)
     updated = Column(UTCDateTime, onupdate=get_date)
 
@@ -45,6 +58,8 @@ class CompStatMaster(Base):
                 'matchtype': self.matchtype,
                 'bibcode_meta': self.bibcode_meta,
                 'bibcode_classic': self.bibcode_classic,
+                'notes': self.notes,
+                'created': self.created,
                 'updated': self.updated}
 
 
@@ -70,6 +85,7 @@ class CompStatSummary(Base):
                 'paper_count': self.paper_count,
                 'complete_fraction': self.complete_fraction,
                 'complete_details': self.complete_byvolume,
+                'created': self.created,
                 'updated': self.updated}
 
 
