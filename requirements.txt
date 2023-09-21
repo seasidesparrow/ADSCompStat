@@ -1,6 +1,0 @@
-git+https://github.com/adsabs/ADSIngestParser.git@v0.9.7
-git+https://github.com/adsabs/ADSIngestEnrichment.git@v0.1.9
-adsputils==1.4.3
-psycopg2-binary==2.9.3
-SQLAlchemy-Utils==0.38.2
-alembic==1.0.0

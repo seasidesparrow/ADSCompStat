@@ -14,6 +14,7 @@ logger = setup_logging('run.py', proj_home=proj_home,
                        level=conf.get('LOGGING_LEVEL', 'INFO'),
                        attach_stdout=conf.get('LOG_STDOUT', False))
 
+
 def get_arguments():
     parser = argparse.ArgumentParser(description='Command line options.')
 
@@ -36,7 +37,7 @@ def get_arguments():
                         dest='do_load_classic',
                         action='store_true',
                         default=False,
-                        help='Load bibstem/bibcode/doi/issn data from classic and journalsdb')
+                        help='Load bibstem/bibcode/doi/issn data from classic flat files')
     parser.add_argument('-m',
                         '--completeness',
                         dest='do_completeness',
@@ -163,7 +164,7 @@ def main():
                 print("No logfiles, nothing to do. Stopping.")
             else:
                 for lf in logfiles:
-                    tasks.task_process_logfile(lf)
+                    tasks.task_process_logfile.delay(lf)
     except Exception as err:
         # logger.warn("Completeness processing failed: %s" % err)
         print("Completeness processing failed: %s" % err)

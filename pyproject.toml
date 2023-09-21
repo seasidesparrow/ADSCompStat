@@ -1,0 +1,96 @@
+[project]
+name = "adscompstat"
+version = "0.9.7"
+description = "Collection completeness statistics management"
+authors = [{ name = "Matthew Templeton", email = "matthew.templeton@cfa.harvard.edu"}]
+license = { text = "MIT" }
+readme = "README.md"
+repository = "https://github.com/adsabs/ADSCompStat"
+documentation = "https://adscompstat.readthedocs.io"
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "Intended Audience :: Developers",
+    "Natural Language :: English",
+    "Operating System :: OS Independent",
+    "Topic :: Software Development :: Libraries",
+]
+packages = [
+    "adscompstat",
+]
+
+dependencies = [
+    'click>=8.0.3',
+    'adsputils==1.4.3',
+    'psycopg2-binary==2.9.3',
+    'SQLAlchemy-Utils==0.38.2',
+    'alembic==1.0.0',
+    'adsingestp @ git+https://github.com/adsabs/ADSIngestParser.git@v0.9.7',
+    'adsenrich @ git+https://github.com/adsabs/ADSIngestEnrichment.git@v0.1.9',
+]
+
+
+[project.urls]
+Source = "https://github.com/adsabs/ADSCompStat"
+Documentation = "https://adscompstat.readthedocs.io"
+
+
+[project.optional-dependencies]
+dev = [
+    'black==23.1.0',
+    'flake8==5.0.4',
+    'isort==5.12.0',
+    'pytest==6.2.5',
+    'pyupgrade==2.29.1',
+    'pytest-mock==3.6.1',
+    'pre-commit==2.16.0',
+    'coveralls==3.3.1',
+    'mock==4.0.3',
+    'coverage==6.2',
+    'pytest-cov==3.0.0',
+    'pytest-cookies==0.6.1',
+    'semantic-release==0.1.0',
+]
+docs = [
+    'Sphinx==4.3.1',
+    'myst-parser==0.15.2',
+    'sphinx-rtd-theme==1.0.0'
+]
+
+
+[tool.semantic_release]
+branch = "main"
+version_toml = "pyproject.toml:project.version"
+version_variable = "adsingestp/version.py:__version__"
+build_command = "flit build"
+
+[tool.pytest.ini_options]
+addopts = "-v -Wdefault --cov=adsingestp"
+cache_dir = ".tmp/"
+
+[tool.coverage.run]
+data_file = ".tmp/.coverage"
+
+[tool.coverage.report]
+skip_empty = true
+skip_covered = true
+
+[tool.isort]
+profile = "black"
+known_first_party = ["adscompstat", "tests"]
+
+[tool.black]
+line-length = 99 # override black's default line-length
+
+[build-system]
+requires = ["setuptools==60.10.0", "wheel", "flit_core >=3.2,<4", "ppsetuptools==2.0.2"]
+build-backend = "flit_core.buildapi"
+#build-backend = "setuptools.build_meta"
+
+# see setup.py for explanation of these
+[xsetup.entry_points]
+console_scripts = [
+    "adscompstat=adscompstat.cli:cli",
+]
+[xsetup]
+scripts = [
+]

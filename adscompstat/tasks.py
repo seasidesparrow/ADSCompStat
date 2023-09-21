@@ -19,13 +19,14 @@ logger = app.logger
 
 app.conf.CELERY_QUEUES = (
     Queue("get-logfiles", app.exchange, routing_key="get-logfiles"),
-    Queue("parse-meta", app.exchange, routing_key="parse-meta"),
+    Queue("process-meta", app.exchange, routing_key="process-meta"),
     Queue("write-db", app.exchange, routing_key="write-db")
     # Queue("match-classic", app.exchange, routing_key="match-classic"),
     # Queue("compute-stats", app.exchange, routing_key="compute-stats"),
 )
 
 
+# No delay/queue, synchronous only
 def task_clear_classic_data():
     with app.session_scope() as session:
         try:
@@ -40,6 +41,7 @@ def task_clear_classic_data():
             logger.error("Failed to clear classic data tables: %s" % err)
 
 
+# No delay/queue, synchronous only
 def task_write_block_to_db(table, datablock):
     with app.session_scope() as session:
         try:
@@ -48,7 +50,8 @@ def task_write_block_to_db(table, datablock):
         except Exception as err:
             session.rollback()
             session.commit()
-            logger.error("Failed to write data block: %s" % err)
+            logger.warning("Failed to write data block: %s" % err)
+
 
 @app.task(queue="write-db")
 def task_write_matched_record_to_db(record):
@@ -66,7 +69,8 @@ def task_write_matched_record_to_db(record):
                              status=record[5],
                              matchtype=record[6],
                              bibcode_meta=record[7],
-                             bibcode_classic=record[8])
+                             bibcode_classic=record[8],
+                             notes=record[9])
                 session.add(row)
                 session.commit()
             else:
@@ -79,13 +83,14 @@ def task_write_matched_record_to_db(record):
                           "status": record[5],
                           "matchtype": record[6],
                           "bibcode_meta": record[7],
-                          "bibcode_classic": record[8]}
+                          "bibcode_classic": record[8],
+                          "notes": record[9]}
                 session.query(master).filter_by(master_doi=doi).update(update)
                 session.commit()
         except Exception as err:
             session.rollback()
             session.flush()
-            logger.error("Error: %s; Record: %s" % (err, record))
+            logger.warning("Error: %s; Record: %s" % (err, record))
 
 
 @app.task(queue="get-logfiles")
@@ -109,13 +114,13 @@ def task_process_logfile(infile):
             batch.append(xmlFilePath)
             if len(batch) == batch_count:
                 logger.debug("Calling task_process_meta with batch '%s'" % batch)
-                task_process_meta(batch)
+                task_process_meta.delay(batch)
                 batch = []
         if len(batch):
             logger.debug("Calling task_process_meta with batch '%s'" % batch)
-            task_process_meta(batch)
+            task_process_meta.delay(batch)
     except Exception as err:
-        logger.error("Error processing logfile %s: %s" % (infile, err))
+        logger.warning("Error processing logfile %s: %s" % (infile, err))
 
 
 def db_query_bibstem(record):
@@ -127,6 +132,8 @@ def db_query_bibstem(record):
                 if not bibstem:
                     issnString = issn.get("issnString", "")
                     if issnString:
+                        if len(issnString) == 8:
+                            issnString = issnString[0:4]+"-"+issnString[4:]
                         try:
                             bibstem_result = session.query(issn_bibstem.bibstem).filter(issn_bibstem.issn==issnString).first()
                             if bibstem_result:
@@ -153,7 +160,7 @@ def db_query_classic_bibcodes(doi, bibcode):
         return bibcodesFromDoi, bibcodesFromBib
 
 
-@app.task(queue="parse-meta")
+@app.task(queue="process-meta")
 def task_process_meta(infile_batch):
     """
     Parses a batch of crossref xml files from the OAIPMH harvester into an
@@ -171,7 +178,7 @@ def task_process_meta(infile_batch):
             try:
                 processedRecord = utils.process_one_meta_xml(infile)
             except Exception as err:
-                logger.error("Parsing failed for %s: %s" % (infile, err))
+                logger.warning("Parsing failed for %s: %s" % (infile, err))
                 doi = ""
                 issns = json.dumps({})
                 bibdata = json.dumps({})
@@ -227,7 +234,12 @@ def task_process_meta(infile_batch):
                                                     bibcodesFromBib)
                         if xmatchResult:
                             matchtype = xmatchResult.get("match", "")
-                            if matchtype in ["canonical", "deleted", "alternate", "partial", "other", "mismatch"]:
+                            if matchtype in ["canonical",
+                                             "deleted",
+                                             "alternate",
+                                             "partial",
+                                             "other",
+                                             "mismatch"]:
                                 status = "Matched"
                             else:
                                 status = "Unmatched"
@@ -258,7 +270,7 @@ def task_process_meta(infile_batch):
                                          classic_bibcode,
                                          "")
                     except Exception as err:
-                        logger.error("Crossref matching failed for %s: %s" % (infile, err))
+                        logger.warning("Crossref matching failed for %s: %s" % (infile, err))
                         doi = processedRecord.get("master_doi", "")
                         issns = json.dumps(processedRecord.get("issns", {}))
                         bibdata = json.dumps(processedRecord.get("master_bibdata", {}))
@@ -278,8 +290,8 @@ def task_process_meta(infile_batch):
                                          classic_bibcode,
                                          str(err))
             if matchedRecord:
-                task_write_matched_record_to_db(matchedRecord)
+                task_write_matched_record_to_db.delay(matchedRecord)
             else:
-                logger.error("No matchedRecord generated for %s!" % infile)
+                logger.warning("No matchedRecord generated for %s!" % infile)
     except Exception as err:
         logger.error("Record batch failed for %s: %s" % (infile_batch, err))
