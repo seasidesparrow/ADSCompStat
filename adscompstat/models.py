@@ -1,32 +1,30 @@
 try:
-    from adsputils import get_date, UTCDateTime
+    from adsputils import UTCDateTime, get_date
 except ImportError:
     from adsmutils import get_date, UTCDateTime
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import (Table, Column, Integer, Numeric, String, TIMESTAMP,
-                        ForeignKey, Boolean, Float, Text, UniqueConstraint)
+
+from sqlalchemy import Column, Float, Integer, String, Text
 from sqlalchemy.dialects.postgresql import ENUM
+from sqlalchemy.ext.declarative import declarative_base
 
 Base = declarative_base()
 
 
 class CompStatMaster(Base):
-    __tablename__ = 'master'
+    __tablename__ = "master"
 
-    match_status = ENUM('Matched',
-                        'Unmatched',
-                        'NoIndex',
-                        'Failed',
-                        name='match_status')
-    match_type = ENUM('canonical',
-                      'deleted',
-                      'alternate',
-                      'partial',
-                      'mismatch',
-                      'unmatched',
-                      'other',
-                      'failed',
-                      name='match_type')
+    match_status = ENUM("Matched", "Unmatched", "NoIndex", "Failed", name="match_status")
+    match_type = ENUM(
+        "canonical",
+        "deleted",
+        "alternate",
+        "partial",
+        "mismatch",
+        "unmatched",
+        "other",
+        "failed",
+        name="match_type",
+    )
 
     masterid = Column(Integer, primary_key=True, unique=True)
     harvest_filepath = Column(String, nullable=False)
@@ -44,27 +42,31 @@ class CompStatMaster(Base):
     updated = Column(UTCDateTime, onupdate=get_date)
 
     def __repr__(self):
-        return "master.masterid='{self.masterid}', master.db_origin='{self.db_origin}', master.master_doi='{self.master_doi}'".format(self=self)
+        return "master.masterid='{self.masterid}', master.db_origin='{self.db_origin}', master.master_doi='{self.master_doi}'".format(
+            self=self
+        )
 
     def toJSON(self):
-        return {'masterid': self.masterid,
-                'harvest_filepath': self.harvest_filepath,
-                'master_doi': self.master_doi,
-                'issns': self.issns,
-                'db_origin': self.db_origin,
-                'master_bibdata': self.master_bibdata,
-                'classic_match': self.classic_match,
-                'status': self.status,
-                'matchtype': self.matchtype,
-                'bibcode_meta': self.bibcode_meta,
-                'bibcode_classic': self.bibcode_classic,
-                'notes': self.notes,
-                'created': self.created,
-                'updated': self.updated}
+        return {
+            "masterid": self.masterid,
+            "harvest_filepath": self.harvest_filepath,
+            "master_doi": self.master_doi,
+            "issns": self.issns,
+            "db_origin": self.db_origin,
+            "master_bibdata": self.master_bibdata,
+            "classic_match": self.classic_match,
+            "status": self.status,
+            "matchtype": self.matchtype,
+            "bibcode_meta": self.bibcode_meta,
+            "bibcode_classic": self.bibcode_classic,
+            "notes": self.notes,
+            "created": self.created,
+            "updated": self.updated,
+        }
 
 
 class CompStatSummary(Base):
-    __tablename__ = 'summary'
+    __tablename__ = "summary"
 
     summaryid = Column(Integer, primary_key=True, unique=True)
     bibstem = Column(String, nullable=False)
@@ -79,28 +81,30 @@ class CompStatSummary(Base):
         return "summary.summaryid='{self.summaryid}', summary.complete_fraction='{self.summary.complete_fraction}'"
 
     def toJSON(self):
-        return {'summaryid': self.summaryid,
-                'bibstem': self.bibstem,
-                'volume': self.volume,
-                'paper_count': self.paper_count,
-                'complete_fraction': self.complete_fraction,
-                'complete_details': self.complete_byvolume,
-                'created': self.created,
-                'updated': self.updated}
+        return {
+            "summaryid": self.summaryid,
+            "bibstem": self.bibstem,
+            "volume": self.volume,
+            "paper_count": self.paper_count,
+            "complete_fraction": self.complete_fraction,
+            "complete_details": self.complete_byvolume,
+            "created": self.created,
+            "updated": self.updated,
+        }
 
 
 class CompStatIdentDoi(Base):
-    __tablename__ = 'identifier_doi'
+    __tablename__ = "identifier_doi"
 
     identifier = Column(String, primary_key=True, nullable=False)
     doi = Column(String, primary_key=True, unique=True, nullable=False)
 
     def __repr__(self):
         return "identifier_doi.identifier='{self.identifier}', identifier_doi.doi='{self.doi}'"
-    
+
 
 class CompStatIssnBibstem(Base):
-    __tablename__ = 'issn_bibstem'
+    __tablename__ = "issn_bibstem"
 
     bibstem = Column(String, primary_key=True, nullable=False)
     issn = Column(String, primary_key=True, unique=True, nullable=False)
@@ -111,7 +115,7 @@ class CompStatIssnBibstem(Base):
 
 
 class CompStatAltIdents(Base):
-    __tablename__ = 'alt_identifiers'
+    __tablename__ = "alt_identifiers"
 
     identifier = Column(String, primary_key=True, unique=True, nullable=False)
     canonical_id = Column(String, primary_key=True, unique=False, nullable=False)
