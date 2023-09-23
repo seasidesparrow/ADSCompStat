@@ -1,8 +1,19 @@
-import adscompstat.utils as utils
-from config import *
+import os
+
+from adsputils import load_config, setup_logging
+
+proj_home = os.path.realpath(os.path.join(os.path.dirname(__file__), "../"))
+conf = load_config(proj_home=proj_home)
+
+logger = setup_logging(
+    "completeness-statistics-pipeline",
+    proj_home=proj_home,
+    level=conf.get("LOGGING_LEVEL", "INFO"),
+    attach_stdout=conf.get("LOG_STDOUT", False),
+)
+
 
 class CrossrefMatcher(object):
-
     def __init__(self):
         pass
 
@@ -29,35 +40,37 @@ class CrossrefMatcher(object):
             classicInit = classicBibcode[18]
 
             if testBibstem == classicBibstem:
-                returnDict['match'] = 'partial'
+                returnDict["match"] = "partial"
                 errs = {}
-                returnDict['bibcode'] = classicBibcode
+                returnDict["bibcode"] = classicBibcode
                 if testYear != classicYear:
-                    errs['year'] = classicYear
+                    errs["year"] = classicYear
                 if testQual != classicQual:
-                    errs['qual'] = classicQual
+                    errs["qual"] = classicQual
                 if testInit != classicInit:
-                    errs['init'] = classicInit
+                    errs["init"] = classicInit
                 if testVol != classicVol:
                     try:
                         if int(testVol) != int(classicVol):
-                            errs['vol'] = classicVol
+                            errs["vol"] = classicVol
                     except Exception as err:
-                        errs['vol'] = classicVol
+                        logger.debug("errs[vol]: %s" % err)
+                        errs["vol"] = classicVol
                 if testPage != classicPage:
                     try:
                         if int(testPage) != int(classicPage):
-                            errs['page'] = classicPage
+                            errs["page"] = classicPage
                     except Exception as err:
-                        errs['page'] = classicPage
-                returnDict['errs'] = errs
+                        logger.debug("errs[page]: %s" % err)
+                        errs["page"] = classicPage
+                returnDict["errs"] = errs
             else:
-                returnDict['match'] = 'mismatch'
-                returnDict['bibcode'] = classicBibcode
+                returnDict["match"] = "mismatch"
+                returnDict["bibcode"] = classicBibcode
         except Exception as err:
-            return {'match': 'mismatch', 'bibcode': classicBibcode}
+            logger.debug("Problem checking bibcode permutations: %s" % err)
+            return {"match": "mismatch", "bibcode": classicBibcode}
         return returnDict
-
 
     def match(self, xrefBibcode, classicDoiMatches, classicBibMatches):
         result = {}
@@ -66,29 +79,29 @@ class CrossrefMatcher(object):
             resultBib = {}
             for match in classicBibMatches:
                 if xrefBibcode == match[0]:
-                    resultBib['match'] = match[2]
-                    resultBib['bibcode'] = match[1]
-                    resultBib['errs'] = {}
+                    resultBib["match"] = match[2]
+                    resultBib["bibcode"] = match[1]
+                    resultBib["errs"] = {}
             resultDoi = {}
             if not classicDoiMatches:
-                resultDoi['match'] = 'unmatched'
-                resultDoi['bibcode'] = None
-                resultDoi['errs'] = {'DOI': 'Not in classic.'}
+                resultDoi["match"] = "unmatched"
+                resultDoi["bibcode"] = None
+                resultDoi["errs"] = {"DOI": "Not in classic."}
             else:
                 for match in classicDoiMatches:
-                    if not resultDoi.get('bibcode', None):
+                    if not resultDoi.get("bibcode", None):
                         if xrefBibcode == match[0]:
-                            resultDoi['match'] = match[2]
-                            resultDoi['bibcode'] = match[1]
-                            resultDoi['errs'] = {}
+                            resultDoi["match"] = match[2]
+                            resultDoi["bibcode"] = match[1]
+                            resultDoi["errs"] = {}
                         else:
                             resultDoi = self._match_bibcode_permutations(xrefBibcode, match[0])
             if resultBib:
-                if resultDoi.get('errs', None):
-                    resultBib['errs'] = resultDoi.get('errs')
+                if resultDoi.get("errs", None):
+                    resultBib["errs"] = resultDoi.get("errs")
                 result = resultBib
             elif resultDoi:
                 result = resultDoi
         except Exception as err:
-            logger.warning('Error matching Crossref-generated bibcode %s: %s' % (xrefBibcode, err))
+            logger.warning("Error matching Crossref-generated bibcode %s: %s" % (xrefBibcode, err))
         return result
