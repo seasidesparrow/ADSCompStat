@@ -7,7 +7,7 @@ CLASSIC_DELBIBS = "/app/data/bibcodes.list.del"
 CLASSIC_ALLBIBS = "/app/data/bibcodes.list.all"
 CLASSIC_CANONICAL = "/app/data/bibcodes.list.can"
 JOURNALSDB_ISSN_BIBSTEM = "/app/data/issn_identifiers"
+COMPLETENESS_EXPORT_FILE = "/app/data/completeness_export.json"
 
 CLASSIC_DATA_BLOCKSIZE = 10000
-
-COMPLETENESS_EXPORT_FILE = "/app/data/completeness_export.json"
+RECORDS_PER_BATCH = 250

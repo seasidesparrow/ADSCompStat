@@ -25,9 +25,9 @@ app = app_module.ADSCompStatCelery(
 logger = app.logger
 
 app.conf.CELERY_QUEUES = (
+    Queue("write-db", app.exchange, routing_key="write-db"),
     Queue("get-logfiles", app.exchange, routing_key="get-logfiles"),
     Queue("process-meta", app.exchange, routing_key="process-meta"),
-    Queue("write-db", app.exchange, routing_key="write-db"),
     Queue("compute-stats", app.exchange, routing_key="compute-stats"),
 )
 
@@ -413,3 +413,43 @@ def task_do_all_completeness():
             task_completeness_per_bibstem.delay(bibstem)
     except Exception as err:
         logger.error("Failed to clear classic data tables: %s" % err)
+
+
+def task_export_completeness_to_json():
+    with app.session_scope() as session:
+        try:
+            allData = []
+            bibstems = session.query(summary.bibstem).distinct().all()
+            bibstems = [x[0] for x in bibstems]
+            for bib in bibstems:
+                completeness = []
+                result = (
+                    session.query(
+                        summary.bibstem,
+                        summary.volume,
+                        summary.complete_fraction,
+                        summary.paper_count,
+                    )
+                    .filter(summary.bibstem == bib)
+                    .all()
+                )
+                paperCount = 0
+                averageCompleteness = 0.0
+                for r in result:
+                    completeness.append({"volume": r[1], "completeness": r[2]})
+                    paperCount += r[3]
+                    averageCompleteness += r[3] * r[2]
+                averageCompleteness = averageCompleteness / paperCount
+                allData.append(
+                    {
+                        "bibstem": bib,
+                        "completeness_fraction": averageCompleteness,
+                        "completeness_details": completeness,
+                    }
+                )
+            if allData:
+                utils.export_completeness_data(
+                    allData, app.conf.get("COMPLETENESS_EXPORT_FILE", None)
+                )
+        except Exception as err:
+            logger.error("Unable to export completeness data to disk: %s" % err)
