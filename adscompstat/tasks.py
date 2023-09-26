@@ -1,4 +1,5 @@
 import json
+import math
 import os
 
 from adsenrich.bibcodes import BibcodeGenerator
@@ -436,14 +437,20 @@ def task_export_completeness_to_json():
                 paperCount = 0
                 averageCompleteness = 0.0
                 for r in result:
-                    completeness.append({"volume": r[1], "completeness": r[2]})
+                    if type(r[2]) == float:
+                        r2_export = (math.floor(10000*r[2] + 0.5)/10000.)
+                    else:
+                        r2_export = r[2]
+                    completeness.append({"volume": r[1],
+                                         "completeness_fraction": r2_export})
                     paperCount += r[3]
                     averageCompleteness += r[3] * r[2]
                 averageCompleteness = averageCompleteness / paperCount
+                avg_export = math.floor(10000*averageCompleteness + 0.5)/10000.
                 allData.append(
                     {
                         "bibstem": bib,
-                        "completeness_fraction": averageCompleteness,
+                        "completeness_fraction": avg_export,
                         "completeness_details": completeness,
                     }
                 )
