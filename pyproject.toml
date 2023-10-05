@@ -60,11 +60,11 @@ docs = [
 [tool.semantic_release]
 branch = "main"
 version_toml = "pyproject.toml:project.version"
-version_variable = "adsingestp/version.py:__version__"
+version_variable = "adscompstat/version.py:__version__"
 build_command = "flit build"
 
 [tool.pytest.ini_options]
-addopts = "-v -Wdefault --cov=adsingestp"
+addopts = "-v -Wdefault --cov=adscompstat"
 cache_dir = ".tmp/"
 
 [tool.coverage.run]
