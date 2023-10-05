@@ -141,7 +141,7 @@ def db_query_bibstem(record):
             bibstem = ""
             for issn in issn_list:
                 if not bibstem:
-                    issnString = issn.get("issnString", "")
+                    issnString = str(issn.get("issnString", ""))
                     if issnString:
                         if len(issnString) == 8:
                             issnString = issnString[0:4] + "-" + issnString[4:]
