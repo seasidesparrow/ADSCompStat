@@ -69,6 +69,14 @@ def get_arguments():
         default=False,
         help="Export completeness summary to JSON file",
     )
+    parser.add_argument(
+        "-r",
+        "--retry",
+        dest="do_retry",
+        action="store_true",
+        default=False,
+        help="Retry all mismatched and unmatched records",
+    )
 
     args = parser.parse_args()
     return args
@@ -177,6 +185,9 @@ def main():
             tasks.task_do_all_completeness()
         elif args.do_json_export:
             tasks.task_export_completeness_to_json()
+        elif args.do_retry:
+            task_retry_mismatched.delay():
+            task_retry_unmatched.delay():
         else:
             logfiles = get_logs(args)
             if not logfiles:

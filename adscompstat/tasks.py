@@ -463,11 +463,11 @@ def task_export_completeness_to_json():
 
 
 @app.task(queue="get-logfiles")
-def task_retry_mismatches():
+def task_retry_mismatched():
     with app.session_scope() as session:
         batch_count = app.conf.get("RECORDS_PER_BATCH", 100)
         try:
-            result = session.query(master.harvest_filepath).filter(master.matchtype="mismatch").all()
+            result = session.query(master.harvest_filepath).filter(master.matchtype=="mismatch").all()
             batch = []
             for r in result:
                 batch.append(r[0])
@@ -487,7 +487,7 @@ def task_retry_unmatched():
     with app.session_scope() as session:
         batch_count = app.conf.get("RECORDS_PER_BATCH", 100)
         try:
-            result = session.query(master.harvest_filepath).filter(master.matchtype="unmatched").all()
+            result = session.query(master.harvest_filepath).filter(master.matchtype=="unmatched").all()
             batch = []
             for r in result:
                 batch.append(r[0])
