@@ -460,3 +460,23 @@ def task_export_completeness_to_json():
                 )
         except Exception as err:
             logger.error("Unable to export completeness data to disk: %s" % err)
+
+
+@app.task(queue="get-logfiles")
+def task_retry_mismatches():
+    with app.session_scope() as session:
+        batch_count = app.conf.get("RECORDS_PER_BATCH", 100)
+        try:
+            result = session.query(master.harvest_filepath).filter(master.matchtype="mismatch").all()
+            batch = []
+            for r in result:
+                batch.append(r[0])
+                if len(batch) == batch_count:
+                    logger.debug("Calling task_process_meta with batch '%s'" % batch)               
+                    task_process_meta.delay(batch)
+                    batch = []
+            if len(batch):
+                logger.debug("Calling task_process_meta with batch '%s'" % batch)
+                task_process_meta.delay(batch)
+        except Exception as err:
+            logger.warning("Error reprocessing mismatches: %s" % err)
