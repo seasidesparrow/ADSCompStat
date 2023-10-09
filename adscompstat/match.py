@@ -14,17 +14,17 @@ logger = setup_logging(
 
 
 class CrossrefMatcher(object):
-    def __init__(self):
-        pass
+
+    def __init__(self, related_bibstems=conf.get("RELATED_BIBSTEMS", [[]])):
+        self.related_bibstems = related_bibstems
 
     def _compare_bibstems(self, testBibstem, classicBibstem):
         status = None
-        related_bibstems = conf.get("RELATED_BIBSTEMS", [[]])
         try:
             if testBibstem == classicBibstem:
                 status = "matched"
             else:
-                for relation in related_bibstems:
+                for relation in self.related_bibstems:
                     if testBibstem in relation and classicBibstem in relation:
                         status = "related"
                         break
@@ -101,11 +101,7 @@ class CrossrefMatcher(object):
                     resultBib["bibcode"] = match[1]
                     resultBib["errs"] = {}
             resultDoi = {}
-            if not classicDoiMatches:
-                resultDoi["match"] = "unmatched"
-                resultDoi["bibcode"] = None
-                resultDoi["errs"] = {"DOI": "Not in classic."}
-            else:
+            if classicDoiMatches:
                 for match in classicDoiMatches:
                     if not resultDoi.get("bibcode", None):
                         if xrefBibcode == match[0]:
@@ -114,12 +110,25 @@ class CrossrefMatcher(object):
                             resultDoi["errs"] = {}
                         else:
                             resultDoi = self._match_bibcode_permutations(xrefBibcode, match[0])
-            if resultBib:
-                if resultDoi.get("errs", None):
-                    resultBib["errs"] = resultDoi.get("errs")
+            if resultDoi:
+                if resultBib:
+                    if resultBib["bibcode"] == resultDoi["bibcode"]:
+                        resultDoi["match"] = resultBib["match"]
+                        result = resultDoi
+                    else:
+                        result = {"match": "mismatch",
+                                  "bibcode": resultDoi["bibcode"],
+                                  "errs": {"DOI": "DOI mismatched",
+                                           "bibcode": resultBib["bibcode"]}}
+                else:
+                    result = resultDoi
+            elif resultBib:
                 result = resultBib
-            elif resultDoi:
-                result = resultDoi
+                result["errs"]["DOI"] = "DOI not in classic"
+            else:
+                result["match"] = "unmatched"
+                result["bibcode"] = None
+                result["errs"] = {"DOI": "DOI not in classic"}
         except Exception as err:
             logger.warning("Error matching Crossref-generated bibcode %s: %s" % (xrefBibcode, err))
         return result

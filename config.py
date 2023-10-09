@@ -12,9 +12,11 @@ COMPLETENESS_EXPORT_FILE = "/app/data/completeness_export.json"
 CLASSIC_DATA_BLOCKSIZE = 10000
 RECORDS_PER_BATCH = 250
 
-RELATED_BIBSTEMS = [["Ap&SS", "ApSSS"],
-                    ["EOS..", "EOSTr"],
-                    ["JGR..", "JGRA.", "JGRB.", "JGRC.", "JGRD.", "JGRE.", "JGRF.", "JGRG.", "JGRS."],
-                    ["PhyS.", "PhST."],
-                    ["AN...", "ANS.."],
-                    ["Moon.", "M&P..", "EM&P."]]
+RELATED_BIBSTEMS = [
+    ["Ap&SS", "ApSSS"],
+    ["EOS..", "EOSTr"],
+    ["JGR..", "JGRA.", "JGRB.", "JGRC.", "JGRD.", "JGRE.", "JGRF.", "JGRG.", "JGRS."],
+    ["PhyS.", "PhST."],
+    ["AN...", "ANS.."],
+    ["Moon.", "M&P..", "EM&P."],
+]

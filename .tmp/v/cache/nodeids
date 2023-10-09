@@ -1,0 +1,11 @@
+[
+  "tests/test_match.py::TestMatch::test__compare_bibstems",
+  "tests/test_match.py::TestMatch::test__match_bibcode_permutations",
+  "tests/test_match.py::TestMatch::test_compare_bibstems",
+  "tests/test_match.py::TestMatch::test_match",
+  "tests/test_match.py::TestMatch::test_match_bibcode_permutations",
+  "tests/test_utils.py::TestUtils::test_get_updateagent_logs",
+  "tests/test_utils.py::TestUtils::test_parse_pub_and_date_from_logs",
+  "tests/test_utils.py::TestUtils::test_process_one_meta_xml",
+  "tests/test_utils.py::TestUtils::test_read_updateagent_log"
+]

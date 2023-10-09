@@ -438,15 +438,14 @@ def task_export_completeness_to_json():
                 averageCompleteness = 0.0
                 for r in result:
                     if type(r[2]) == float:
-                        r2_export = (math.floor(10000*r[2] + 0.5)/10000.)
+                        r2_export = math.floor(10000 * r[2] + 0.5) / 10000.0
                     else:
                         r2_export = r[2]
-                    completeness.append({"volume": r[1],
-                                         "completeness_fraction": r2_export})
+                    completeness.append({"volume": r[1], "completeness_fraction": r2_export})
                     paperCount += r[3]
                     averageCompleteness += r[3] * r[2]
                 averageCompleteness = averageCompleteness / paperCount
-                avg_export = math.floor(10000*averageCompleteness + 0.5)/10000.
+                avg_export = math.floor(10000 * averageCompleteness + 0.5) / 10000.0
                 allData.append(
                     {
                         "bibstem": bib,
@@ -467,12 +466,14 @@ def task_retry_mismatched():
     with app.session_scope() as session:
         batch_count = app.conf.get("RECORDS_PER_BATCH", 100)
         try:
-            result = session.query(master.harvest_filepath).filter(master.matchtype=="mismatch").all()
+            result = (
+                session.query(master.harvest_filepath).filter(master.matchtype == "mismatch").all()
+            )
             batch = []
             for r in result:
                 batch.append(r[0])
                 if len(batch) == batch_count:
-                    logger.debug("Calling task_process_meta with batch '%s'" % batch)               
+                    logger.debug("Calling task_process_meta with batch '%s'" % batch)
                     task_process_meta.delay(batch)
                     batch = []
             if len(batch):
@@ -487,12 +488,16 @@ def task_retry_unmatched():
     with app.session_scope() as session:
         batch_count = app.conf.get("RECORDS_PER_BATCH", 100)
         try:
-            result = session.query(master.harvest_filepath).filter(master.matchtype=="unmatched").all()
+            result = (
+                session.query(master.harvest_filepath)
+                .filter(master.matchtype == "unmatched")
+                .all()
+            )
             batch = []
             for r in result:
                 batch.append(r[0])
                 if len(batch) == batch_count:
-                    logger.debug("Calling task_process_meta with batch '%s'" % batch)               
+                    logger.debug("Calling task_process_meta with batch '%s'" % batch)
                     task_process_meta.delay(batch)
                     batch = []
             if len(batch):

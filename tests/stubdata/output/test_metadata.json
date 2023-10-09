@@ -1,0 +1,246 @@
+{
+  "record": {
+    "recordData": {
+      "createdTime": "",
+      "parsedTime": "",
+      "loadType": "fromFile",
+      "loadFormat": "OtherXML",
+      "loadLocation": "",
+      "recordOrigin": ""
+    },
+    "editorialHistory": {
+      "receivedDates": [
+        "2015-04-02"
+      ],
+      "acceptedDate": "2015-11-15"
+    },
+    "pubDate": {
+      "electrDate": "2015-12-29"
+    },
+    "publication": {
+      "pubName": "The Astrophysical Journal",
+      "issueNum": "1",
+      "volumeNum": "816",
+      "pubYear": "2015",
+      "ISSN": [
+        {
+          "pubtype": "electronic",
+          "issnString": "1538-4357"
+        }
+      ]
+    },
+    "persistentIDs": [
+      {
+        "DOI": "10.3847/0004-637X/816/1/36"
+      }
+    ],
+    "pagination": {
+      "firstPage": "36"
+    },
+    "authors": [
+      {
+        "name": {
+          "surname": "Xiong",
+          "given_name": "Gang"
+        }
+      },
+      {
+        "name": {
+          "surname": "Yang",
+          "given_name": "Jiamin"
+        }
+      },
+      {
+        "name": {
+          "surname": "Zhang",
+          "given_name": "Jiyan"
+        }
+      },
+      {
+        "name": {
+          "surname": "Hu",
+          "given_name": "Zhimin"
+        }
+      },
+      {
+        "name": {
+          "surname": "Zhao",
+          "given_name": "Yang"
+        }
+      },
+      {
+        "name": {
+          "surname": "Qing",
+          "given_name": "Bo"
+        }
+      },
+      {
+        "name": {
+          "surname": "Yang",
+          "given_name": "Guohong"
+        }
+      },
+      {
+        "name": {
+          "surname": "Wei",
+          "given_name": "Minxi"
+        }
+      },
+      {
+        "name": {
+          "surname": "Yi",
+          "given_name": "Rongqing"
+        }
+      },
+      {
+        "name": {
+          "surname": "Song",
+          "given_name": "Tianming"
+        }
+      },
+      {
+        "name": {
+          "surname": "Li",
+          "given_name": "Hang"
+        }
+      },
+      {
+        "name": {
+          "surname": "Yuan",
+          "given_name": "Zheng"
+        }
+      },
+      {
+        "name": {
+          "surname": "Lv",
+          "given_name": "Min"
+        }
+      },
+      {
+        "name": {
+          "surname": "Meng",
+          "given_name": "Xujun"
+        }
+      },
+      {
+        "name": {
+          "surname": "Xu",
+          "given_name": "Yan"
+        }
+      },
+      {
+        "name": {
+          "surname": "Wu",
+          "given_name": "Zeqing"
+        }
+      },
+      {
+        "name": {
+          "surname": "Yan",
+          "given_name": "Jun"
+        }
+      }
+    ],
+    "title": {
+      "textEnglish": "OPACITY MEASUREMENT AND THEORETICAL INVESTIGATION OF HOT SILICON PLASMA"
+    },
+    "references": [
+      "<citation key=\"1\"><doi>10.1016/j.hedp.2007.03.002</doi></citation>",
+      "<citation key=\"2\"><cYear>2010</cYear><doi provider=\"crossref\">10.1088/0004-637X/711/2/888</doi><volume>711</volume><first_page>888</first_page><issn>0004-637X</issn><journal_title>ApJ</journal_title><author>Andrade-Vel\u00e1zquez M.</author></citation>",
+      "<citation key=\"3\"><cYear>2011</cYear><doi provider=\"crossref\">10.1088/0004-637X/738/1/97</doi><volume>738</volume><first_page>97</first_page><issn>0004-637X</issn><journal_title>ApJ</journal_title><author>Brugamyer E.</author></citation>",
+      "<citation key=\"4\"><cYear>2007</cYear><doi provider=\"crossref\">10.1086/518639</doi><volume>663</volume><first_page>1207</first_page><issn>0004-637X</issn><journal_title>ApJ</journal_title><author>Chang C.</author></citation>",
+      "<citation key=\"5\"><cYear>2000</cYear><doi provider=\"crossref\">10.1086/313354</doi><volume>127</volume><first_page>275</first_page><issn>0067-0049</issn><journal_title>ApJS</journal_title><author>Chenais-Popovics C.</author></citation>",
+      "<citation key=\"6\"><cYear>2013</cYear><first_page>17</first_page><journal_title>AIP Conf. Proc. 1545</journal_title><author>Colgan J.</author></citation>",
+      "<citation key=\"7\"><doi>10.1016/j.hedp.2013.03.001</doi></citation>",
+      "<citation key=\"8\"><cYear>1981</cYear><doi provider=\"crossref\">10.1525/9780520906150</doi><journal_title>Theory of Atomic Spectra</journal_title><author>Cowan R. D.</author></citation>",
+      "<citation key=\"9\"><doi>10.1086/190383</doi></citation>",
+      "<citation key=\"10\"><doi>10.1103/PhysRevLett.69.438</doi></citation>",
+      "<citation key=\"11\"><cYear>1987</cYear><volume>172</volume><first_page>345</first_page><issn>0004-6361</issn><journal_title>A&A</journal_title><author>Dimitrijevic M. S.</author></citation>",
+      "<citation key=\"12\"><doi>10.1063/1.3274449</doi></citation>",
+      "<citation key=\"13\"><cYear>1998</cYear><doi provider=\"crossref\">10.1209/epl/i1998-00494-8</doi><volume>44</volume><first_page>459</first_page><issn>0295-5075</issn><journal_title>EL</journal_title><author>Eidmann K.</author></citation>",
+      "<citation key=\"14\"><doi>10.1016/j.jqsrt.2005.05.014</doi></citation>",
+      "<citation key=\"15\"><cYear>2015</cYear><doi provider=\"crossref\">10.1088/0953-4075/48/14/144014</doi><volume>48</volume><issn>0953-4075</issn><journal_title>JPhB</journal_title><author>Fontes C. J.</author></citation>",
+      "<citation key=\"16\"><cYear>2003</cYear><doi provider=\"crossref\">10.1086/344745</doi><volume>582</volume><first_page>1241</first_page><issn>0004-637X</issn><journal_title>ApJ</journal_title><author>Gu M. F.</author></citation>",
+      "<citation key=\"17\"><doi>10.1063/1.4883641</doi></citation>",
+      "<citation key=\"18\"><doi>10.1016/j.jqsrt.2005.04.007</doi></citation>",
+      "<citation key=\"19\"><cYear>2007</cYear><doi provider=\"crossref\">10.1086/518416</doi><volume>663</volume><first_page>799</first_page><issn>0004-637X</issn><journal_title>ApJ</journal_title><author>Holczer T.</author></citation>",
+      "<citation key=\"20\"><cYear>2006</cYear><doi provider=\"crossref\">10.1086/504863</doi><volume>646</volume><first_page>493</first_page><issn>0004-637X</issn><journal_title>ApJ</journal_title><author>Juett A. M.</author></citation>",
+      "<citation key=\"21\"><cYear>2002</cYear><doi provider=\"crossref\">10.1086/341113</doi><volume>574</volume><first_page>643</first_page><issn>0004-637X</issn><journal_title>ApJ</journal_title><author>Kaspi S.</author></citation>",
+      "<citation key=\"22\"><cYear>2000</cYear><doi provider=\"crossref\">10.1086/312697</doi><volume>535</volume><first_page>L17</first_page><issn>0004-637X</issn><journal_title>ApJL</journal_title><author>Kaspi S.</author></citation>",
+      "<citation key=\"23\"><cYear>2001</cYear><doi provider=\"crossref\">10.1086/321333</doi><volume>554</volume><first_page>216</first_page><issn>0004-637X</issn><journal_title>ApJ</journal_title><author>Kaspi S.</author></citation>",
+      "<citation key=\"24\"><cYear>2012</cYear><doi provider=\"crossref\">10.1088/0004-637X/746/1/2</doi><volume>746</volume><first_page>2</first_page><issn>0004-637X</issn><journal_title>ApJ</journal_title><author>King A. L.</author></citation>",
+      "<citation key=\"25\"><cYear>2014</cYear><author>Kramida A.</author></citation>",
+      "<citation key=\"26\"><cYear>2003</cYear><doi provider=\"crossref\">10.1086/378639</doi><volume>597</volume><first_page>832</first_page><issn>0004-637X</issn><journal_title>ApJ</journal_title><author>Krongold Y.</author></citation>",
+      "<citation key=\"27\"><doi>10.1063/1.3460269</doi></citation>",
+      "<citation key=\"28\"><doi>10.1063/1.1578638</doi></citation>",
+      "<citation key=\"29\"><cYear>1995</cYear><first_page>51</first_page><journal_title>ASP Conf. Ser. 78, Astrophysical Applications of Powerful New Databases, ed. S. J. Adelman, & W. L. Wiese</journal_title><author>Magee N. H.</author></citation>",
+      "<citation key=\"30\"><cYear>2003</cYear><doi provider=\"crossref\">10.1086/379508</doi><volume>599</volume><first_page>933</first_page><issn>0004-637X</issn><journal_title>ApJ</journal_title><author>Netzer H.</author></citation>",
+      "<citation key=\"31\"><cYear>2008</cYear><doi provider=\"crossref\">10.1086/587804</doi><volume>177</volume><first_page>408</first_page><issn>0067-0049</issn><journal_title>ApJS</journal_title><author>Palmeri P.</author></citation>",
+      "<citation key=\"32\"><doi>10.1103/PhysRevLett.67.3784</doi></citation>",
+      "<citation key=\"33\"><cYear>2000</cYear><doi provider=\"crossref\">10.1086/313368</doi><volume>127</volume><first_page>433</first_page><issn>0067-0049</issn><journal_title>ApJS</journal_title><author>Perry T. S.</author></citation>",
+      "<citation key=\"34\"><doi>10.1103/PhysRevE.54.5617</doi></citation>",
+      "<citation key=\"35\"><doi>10.1016/0010-4655(88)90008-2</doi></citation>",
+      "<citation key=\"36\"><doi>10.1086/191659</doi></citation>",
+      "<citation key=\"37\"><doi>10.1126/science.263.5143.50</doi></citation>",
+      "<citation key=\"38\"><cYear>1992</cYear><doi provider=\"crossref\">10.1088/0953-4075/25/7/034</doi><volume>25</volume><first_page>1667</first_page><issn>0953-4075</issn><journal_title>JPhB</journal_title><author>Rose S. J.</author></citation>",
+      "<citation key=\"39\"><doi>10.1051/0004-6361:20000081</doi></citation>",
+      "<citation key=\"40\"><doi>10.1111/j.1365-2966.2004.08205.x</doi></citation>",
+      "<citation key=\"41\"><doi>10.1093/mnras/stt103</doi></citation>",
+      "<citation key=\"42\"><doi>10.1103/PhysRevLett.69.3735</doi></citation>",
+      "<citation key=\"43\"><doi>10.1016/S0022-4073(97)00099-X</doi></citation>",
+      "<citation key=\"44\"><doi>10.1051/0004-6361:20010663</doi></citation>",
+      "<citation key=\"45\"><cYear>2008</cYear><doi provider=\"crossref\">10.1086/588750</doi><volume>683</volume><first_page>577</first_page><issn>0004-637X</issn><journal_title>ApJ</journal_title><author>Wei H. G.</author></citation>",
+      "<citation key=\"46\"><doi>10.1016/0022-4073(95)00080-5</doi></citation>",
+      "<citation key=\"47\"><doi>10.1103/PhysRevE.53.R1332</doi></citation>",
+      "<citation key=\"48\"><doi>10.1103/PhysRevE.64.056401</doi></citation>",
+      "<citation key=\"49\"><doi>10.1063/1.1416482</doi></citation>",
+      "<citation key=\"50\"><doi>10.1063/1.1621626</doi></citation>",
+      "<citation key=\"51\"><doi>10.1103/PhysRevE.76.026401</doi></citation>",
+      "<citation key=\"52\"><doi>10.1063/1.4769103</doi></citation>",
+      "<citation key=\"53\"><doi>10.1063/1.3660407</doi></citation>",
+      "<citation key=\"54\"><doi>10.1063/1.2794740</doi></citation>",
+      "<citation key=\"55\"><cYear>2008</cYear><volume>112</volume><issn>1742-6596</issn><journal_title>JPhCS</journal_title><author>Zhang Y.</author></citation>"
+    ],
+    "copyright": {
+      "status": true,
+      "statement": "\u00a9 2016. The American Astronomical Society. All rights reserved."
+    }
+  },
+  "harvest_filepath": "tests/stubdata/input/test_metadata.xml",
+  "master_doi": "10.3847/0004-637X/816/1/36",
+  "issns": {
+    "electronic": "1538-4357"
+  },
+  "master_bibcode": null,
+  "master_bibdata": {
+    "publication": {
+      "pubName": "The Astrophysical Journal",
+      "issueNum": "1",
+      "volumeNum": "816",
+      "pubYear": "2015",
+      "ISSN": [
+        {
+          "pubtype": "electronic",
+          "issnString": "1538-4357"
+        }
+      ]
+    },
+    "pagination": {
+      "firstPage": "36"
+    },
+    "persistentIDs": [
+      {
+        "DOI": "10.3847/0004-637X/816/1/36"
+      }
+    ],
+    "first_author": {
+      "name": {
+        "surname": "Xiong",
+        "given_name": "Gang"
+      }
+    },
+    "title": {
+      "textEnglish": "OPACITY MEASUREMENT AND THEORETICAL INVESTIGATION OF HOT SILICON PLASMA"
+    }
+  }
+}
