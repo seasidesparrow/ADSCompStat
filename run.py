@@ -186,8 +186,8 @@ def main():
         elif args.do_json_export:
             tasks.task_export_completeness_to_json()
         elif args.do_retry:
-            task_retry_mismatched.delay():
-            task_retry_unmatched.delay():
+            tasks.task_retry_mismatched.delay()
+            tasks.task_retry_unmatched.delay()
         else:
             logfiles = get_logs(args)
             if not logfiles:

@@ -17,6 +17,21 @@ class CrossrefMatcher(object):
     def __init__(self):
         pass
 
+    def _compare_bibstems(self, testBibstem, classicBibstem):
+        status = None
+        related_bibstems = conf.get("RELATED_BIBSTEMS", [[]])
+        try:
+            if testBibstem == classicBibstem:
+                status = "matched"
+            else:
+                for relation in related_bibstems:
+                    if testBibstem in relation and classicBibstem in relation:
+                        status = "related"
+                        break
+        except Exception as err:
+            logger.debug("Exception in compare_bibstems: %s" % err)
+        return status
+
     def _match_bibcode_permutations(self, testBibcode, classicBibcode):
         try:
             returnDict = {}
@@ -39,10 +54,13 @@ class CrossrefMatcher(object):
             testInit = testBibcode[18]
             classicInit = classicBibcode[18]
 
-            if testBibstem == classicBibstem:
+            stem = self._compare_bibstems(testBibstem, classicBibstem)
+            if stem:
                 returnDict["match"] = "partial"
                 errs = {}
                 returnDict["bibcode"] = classicBibcode
+                if stem == "related":
+                    errs["bibstem"] = stem
                 if testYear != classicYear:
                     errs["year"] = classicYear
                 if testQual != classicQual:
