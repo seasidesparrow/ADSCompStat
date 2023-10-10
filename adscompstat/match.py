@@ -14,7 +14,6 @@ logger = setup_logging(
 
 
 class CrossrefMatcher(object):
-
     def __init__(self, related_bibstems=conf.get("RELATED_BIBSTEMS", [[]])):
         self.related_bibstems = related_bibstems
 
@@ -116,10 +115,11 @@ class CrossrefMatcher(object):
                         resultDoi["match"] = resultBib["match"]
                         result = resultDoi
                     else:
-                        result = {"match": "mismatch",
-                                  "bibcode": resultDoi["bibcode"],
-                                  "errs": {"DOI": "DOI mismatched",
-                                           "bibcode": resultBib["bibcode"]}}
+                        result = {
+                            "match": "mismatch",
+                            "bibcode": resultDoi["bibcode"],
+                            "errs": {"DOI": "DOI mismatched", "bibcode": resultBib["bibcode"]},
+                        }
                 else:
                     result = resultDoi
             elif resultBib:

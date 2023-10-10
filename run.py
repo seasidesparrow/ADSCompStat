@@ -122,7 +122,9 @@ def write_to_database(table_def, data):
         if data and table_def:
             i = 0
             while i < total_rows:
-                logger.debug("Writing to db: %s of %s rows remaining" % (len(data) - i, total_rows))
+                logger.debug(
+                    "Writing to db: %s of %s rows remaining" % (len(data) - i, total_rows)
+                )
                 insertblock = data[i : (i + blocksize)]
                 tasks.task_write_block_to_db(table_def, insertblock)
                 i += blocksize

@@ -66,7 +66,6 @@ def read_updateagent_log(logfile):
         with open(logfile, "r") as fl:
             for line in fl.readlines():
                 (filename, harvest_time) = line.strip().split("\t")
-                # xmlfiles.append({'filename': filename, 'harvest_time': harvest_time})
                 xmlfiles.append(filename)
     except Exception as err:
         raise ReadLogException(err)
@@ -92,8 +91,6 @@ def process_one_meta_xml(infile):
                 raise CrossRefParseException(err)
             else:
                 if record:
-                    # field the bib data parsed from the record into a
-                    # processedRecord to be sent to task_match_with_classic
                     publication = record.get("publication", None)
                     first_author = record.get("authors", [])[0]
                     title = record.get("title", None)
@@ -141,34 +138,7 @@ def process_one_meta_xml(infile):
     return processedRecord
 
 
-def simple_parse_one_meta_xml(infile):
-    try:
-        with open(infile, "r") as fx:
-            data = fx.read()
-            try:
-                parser = BaseBeautifulSoupParser()
-                record = parser.bsstrtodict(data)
-                doi = record.find("doi").get_text()
-                issn_all = record.find_all("issn")
-                issns = []
-                for issn in issn_all:
-                    if issn.get_text() and re_issn.match(issn.get_text()):
-                        if issn.has_attr("media_type"):
-                            issns.append((issn["media_type"], issn.get_text()))
-                        else:
-                            issns.append(("print", issn.get_text()))
-            except Exception as err:
-                raise BaseParseException(err)
-        return (doi, issns)
-    except Exception as err:
-        raise ParseMetaXMLException(err)
-
-
-# loading bibcode-doi and bibstem-issn data into postgres
-
-
 def load_classic_doi_bib_map(infile):
-    # Classic: DOI-bibcode mapping
     records_bib_doi = list()
     found_doi = dict()
     try:
@@ -217,8 +187,7 @@ def load_classic_canonical_list(infile):
                 if len(bibcode) == 19:
                     canonicalList.append(bibcode)
                 else:
-                    # logger.debug("bad line in %s: %s" % (infile, l.strip()))
-                    pass
+                    logger.debug("bad line in %s: %s" % (infile, line.strip()))
     except Exception as err:
         raise LoadClassicDataException("Unable to load canonical bibcodes list! %s" % err)
     return canonicalList
@@ -232,8 +201,6 @@ def load_classic_noncanonical_bibs(bibfile):
                 try:
                     (noncbib, canonical) = line.strip().split()
                 except Exception:
-                    # logger.debug("singleton bibcode in %s: %s" % (infile, l.strip()))
-                    # pass
                     noncbib = line.strip()
                     canonical = "none"
                 if not noncbibcodes.get(noncbib, None):
