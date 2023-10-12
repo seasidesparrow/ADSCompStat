@@ -14,7 +14,7 @@ logger = setup_logging(
 
 
 class CrossrefMatcher(object):
-    def __init__(self, related_bibstems=conf.get("RELATED_BIBSTEMS", [[]])):
+    def __init__(self, related_bibstems=[]):
         self.related_bibstems = related_bibstems
 
     def _compare_bibstems(self, testBibstem, classicBibstem):

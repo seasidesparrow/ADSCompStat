@@ -32,6 +32,20 @@ app.conf.CELERY_QUEUES = (
     Queue("compute-stats", app.exchange, routing_key="compute-stats"),
 )
 
+related_bibstems = []
+related_bibs_file = app.conf.get("JOURNALSDB_RELATED_BIBSTEMS", None)
+if related_bibs_file:
+    try:
+        with open(related_bibs_file,'r') as fj:
+            data = json.load(fj)
+            related_bibstems = data.get("related_bibstems", [])
+    except Exception as err:
+        logger.warning("Unable to load related bibstems list: %s" % err)
+else:
+    logger.warning("Related bibstems filename not set.")
+
+
+
 
 # No delay/queue, synchronous only
 def task_clear_classic_data():
@@ -265,7 +279,7 @@ def task_process_meta(infile_batch):
                         (bibcodesFromDoi, bibcodesFromBib) = db_query_classic_bibcodes(
                             doi, bibcode
                         )
-                        xmatch = CrossrefMatcher()
+                        xmatch = CrossrefMatcher(related_bibstems=related_bibstems)
                         xmatchResult = xmatch.match(bibcode, bibcodesFromDoi, bibcodesFromBib)
                         if xmatchResult:
                             matchtype = xmatchResult.get("match", "")
@@ -462,12 +476,12 @@ def task_export_completeness_to_json():
 
 
 @app.task(queue="get-logfiles")
-def task_retry_mismatched():
+def task_retry_records(rec_type):
     with app.session_scope() as session:
         batch_count = app.conf.get("RECORDS_PER_BATCH", 100)
         try:
             result = (
-                session.query(master.harvest_filepath).filter(master.matchtype == "mismatch").all()
+                session.query(master.harvest_filepath).filter(master.matchtype == rec_type).all()
             )
             batch = []
             for r in result:
@@ -480,28 +494,4 @@ def task_retry_mismatched():
                 logger.debug("Calling task_process_meta with batch '%s'" % batch)
                 task_process_meta.delay(batch)
         except Exception as err:
-            logger.warning("Error reprocessing mismatched records: %s" % err)
-
-
-@app.task(queue="get-logfiles")
-def task_retry_unmatched():
-    with app.session_scope() as session:
-        batch_count = app.conf.get("RECORDS_PER_BATCH", 100)
-        try:
-            result = (
-                session.query(master.harvest_filepath)
-                .filter(master.matchtype == "unmatched")
-                .all()
-            )
-            batch = []
-            for r in result:
-                batch.append(r[0])
-                if len(batch) == batch_count:
-                    logger.debug("Calling task_process_meta with batch '%s'" % batch)
-                    task_process_meta.delay(batch)
-                    batch = []
-            if len(batch):
-                logger.debug("Calling task_process_meta with batch '%s'" % batch)
-                task_process_meta.delay(batch)
-        except Exception as err:
-            logger.warning("Error reprocessing unmatched records: %s" % err)
+            logger.warning("Error reprocessing records of matchtype \"%s\": %s" % (rec_type, err))
