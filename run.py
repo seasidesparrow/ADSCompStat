@@ -189,7 +189,7 @@ def main():
             tasks.task_export_completeness_to_json()
         elif args.do_retry:
             for result_type in ["mismatch", "unmatched", "failed"]:
-               tasks.task_retry_records.delay(result_type)
+                tasks.task_retry_records.delay(result_type)
         else:
             logfiles = get_logs(args)
             if not logfiles:

@@ -3,12 +3,10 @@ import os
 import re
 from glob import glob
 
-from adsingestp.parsers.base import BaseBeautifulSoupParser
 from adsingestp.parsers.crossref import CrossrefParser
 from adsputils import load_config, setup_logging
 
 from adscompstat.exceptions import (
-    BaseParseException,
     CompletenessFractionException,
     CrossRefParseException,
     JsonExportException,
@@ -18,7 +16,6 @@ from adscompstat.exceptions import (
     MissingFilenameException,
     NoHarvestLogsException,
     ParseLogsException,
-    ParseMetaXMLException,
     ReadLogException,
 )
 

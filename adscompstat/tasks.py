@@ -36,15 +36,13 @@ related_bibstems = []
 related_bibs_file = app.conf.get("JOURNALSDB_RELATED_BIBSTEMS", None)
 if related_bibs_file:
     try:
-        with open(related_bibs_file,'r') as fj:
+        with open(related_bibs_file, "r") as fj:
             data = json.load(fj)
             related_bibstems = data.get("related_bibstems", [])
     except Exception as err:
         logger.warning("Unable to load related bibstems list: %s" % err)
 else:
     logger.warning("Related bibstems filename not set.")
-
-
 
 
 # No delay/queue, synchronous only
@@ -494,4 +492,4 @@ def task_retry_records(rec_type):
                 logger.debug("Calling task_process_meta with batch '%s'" % batch)
                 task_process_meta.delay(batch)
         except Exception as err:
-            logger.warning("Error reprocessing records of matchtype \"%s\": %s" % (rec_type, err))
+            logger.warning('Error reprocessing records of matchtype "%s": %s' % (rec_type, err))

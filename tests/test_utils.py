@@ -94,17 +94,25 @@ class TestUtils(unittest.TestCase):
         ]
         self.assertEqual(test_result, correct_result)
 
-
     def test_load_classic_canonical_list(self):
         test_infile = "tests/stubdata/input/canonical_list"
         test_result = utils.load_classic_canonical_list(test_infile)
-        correct_result = ["2020ApJ...777...13A", "2020ApJ...777...14Q", "2020ApJ...777...15A", "2020ApJ...777...16A", "2020ApJ...777...18A"]
+        correct_result = [
+            "2020ApJ...777...13A",
+            "2020ApJ...777...14Q",
+            "2020ApJ...777...15A",
+            "2020ApJ...777...16A",
+            "2020ApJ...777...18A",
+        ]
         self.assertEqual(test_result, correct_result)
 
     def test_load_classic_noncanonical_bibs(self):
         test_infile = "tests/stubdata/input/deleted_list"
         test_result = utils.load_classic_noncanonical_bibs(test_infile)
-        correct_result = {"2013xyzp.conf..208F": "none", "2019ApJ...777...18A": "2020ApJ...777...18A"}
+        correct_result = {
+            "2013xyzp.conf..208F": "none",
+            "2019ApJ...777...18A": "2020ApJ...777...18A",
+        }
         self.assertEqual(test_result, correct_result)
 
     def test_merge_bibcode_lists(self):
@@ -112,37 +120,56 @@ class TestUtils(unittest.TestCase):
         test_alternate_file = "tests/stubdata/input/alternate_list"
         test_deleted_file = "tests/stubdata/input/deleted_list"
         test_allbib_file = "tests/stubdata/input/all_list"
-        test_result = utils.merge_bibcode_lists(test_canonical_file, test_alternate_file, test_deleted_file, test_allbib_file)
+        test_result = utils.merge_bibcode_lists(
+            test_canonical_file, test_alternate_file, test_deleted_file, test_allbib_file
+        )
         correct_result = [
-            {"canonical_id": "2020ApJ...777...13A",
-             "identifier": "2020ApJ...777...13A",
-             "idtype": "canonical"},
-            {"canonical_id": "2020ApJ...777...14Q",
-             "identifier": "2020ApJ...777...14Q",
-             "idtype": "canonical"},
-            {"canonical_id": "2020ApJ...777...15A",
-             "identifier": "2020ApJ...777...15A",
-             "idtype": "canonical"},
-            {"canonical_id": "2020ApJ...777...16A",
-             "identifier": "2020ApJ...777...16A",
-             "idtype": "canonical"},
-            {"canonical_id": "2020ApJ...777...18A",
-             "identifier": "2020ApJ...777...18A",
-             "idtype": "canonical"},
-            {"canonical_id": "2020ApJ...777...14Q",
-             "identifier": "2020ApJ...777...14P",
-             "idtype": "alternate"},
-            {"canonical_id": "none",
-             "identifier": "2013xyzp.conf..208F",
-             "idtype": "deleted"},
-            {"canonical_id": "2020ApJ...777...18A",
-             "identifier": "2019ApJ...777...18A",
-             "idtype": "deleted"}]
+            {
+                "canonical_id": "2020ApJ...777...13A",
+                "identifier": "2020ApJ...777...13A",
+                "idtype": "canonical",
+            },
+            {
+                "canonical_id": "2020ApJ...777...14Q",
+                "identifier": "2020ApJ...777...14Q",
+                "idtype": "canonical",
+            },
+            {
+                "canonical_id": "2020ApJ...777...15A",
+                "identifier": "2020ApJ...777...15A",
+                "idtype": "canonical",
+            },
+            {
+                "canonical_id": "2020ApJ...777...16A",
+                "identifier": "2020ApJ...777...16A",
+                "idtype": "canonical",
+            },
+            {
+                "canonical_id": "2020ApJ...777...18A",
+                "identifier": "2020ApJ...777...18A",
+                "idtype": "canonical",
+            },
+            {
+                "canonical_id": "2020ApJ...777...14Q",
+                "identifier": "2020ApJ...777...14P",
+                "idtype": "alternate",
+            },
+            {"canonical_id": "none", "identifier": "2013xyzp.conf..208F", "idtype": "deleted"},
+            {
+                "canonical_id": "2020ApJ...777...18A",
+                "identifier": "2019ApJ...777...18A",
+                "idtype": "deleted",
+            },
+        ]
         self.assertEqual(test_result, correct_result)
 
-
     def test_get_completeness_fraction(self):
-        test_summary = [{"status": "Matched", "matchtype": "canonical", "count": 150}, {"status": "Matched", "matchtype": "deleted", "count": 3}, {"status": "Matched", "matchtype": "mismatch", "count": 4}, {"status": "Unmatched", "matchtype": "unmatched", "count": 13}]
+        test_summary = [
+            {"status": "Matched", "matchtype": "canonical", "count": 150},
+            {"status": "Matched", "matchtype": "deleted", "count": 3},
+            {"status": "Matched", "matchtype": "mismatch", "count": 4},
+            {"status": "Unmatched", "matchtype": "unmatched", "count": 13},
+        ]
         test_result = utils.get_completeness_fraction(test_summary)
         correct_result = (170, 0.9)
         self.assertEqual(test_result, correct_result)
