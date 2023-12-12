@@ -352,9 +352,8 @@ def task_process_meta(infile_batch):
 
 @app.task(queue="compute-stats")
 def task_completeness_per_bibstem(bibstem):
-    if len(bibstem) < 5:
-        bibstem = bibstem.ljust(5, ".")
     try:
+        bibstem = bibstem.ljust(5, ".")
         with app.session_scope() as session:
             result = (
                 session.query(

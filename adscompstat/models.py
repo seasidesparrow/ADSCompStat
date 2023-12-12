@@ -87,7 +87,7 @@ class CompStatSummary(Base):
             "volume": self.volume,
             "paper_count": self.paper_count,
             "complete_fraction": self.complete_fraction,
-            "complete_details": self.complete_byvolume,
+            "complete_details": self.complete_details,
             "created": self.created,
             "updated": self.updated,
         }

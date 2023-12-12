@@ -89,29 +89,28 @@ def get_logs(args):
         (dates, pubdois) = utils.parse_pub_and_date_from_logs(logfiles)
         if args.do_pub:
             if args.do_pub in pubdois:
+                newlogs = list()
                 try:
-                    newlogs = list()
                     for logfile in logfiles:
                         if args.do_pub in logfile:
                             newlogs.append(logfile)
-                    logfiles = newlogs
                 except Exception as err:
                     raise GetLogException(
                         "Problem selecting publisher (%s): %s" % (args.do_pub, err)
                     )
+                logfiles = newlogs
             else:
                 raise GetLogException("No log files available for publisher %s" % args.do_pub)
         if args.do_latest:
             latestDate = dates[-1]
+            newlogs = list()
             try:
-                newlogs = list()
                 for logfile in logfiles:
                     if latestDate in logfile:
                         newlogs.append(logfile)
-                logfiles = newlogs
             except Exception as err:
                 raise GetLogException("Problem selecting most recent (%s): %s" % (latestDate, err))
-        # elif args.do_since:
+            logfiles = newlogs
     return logfiles
 
 
