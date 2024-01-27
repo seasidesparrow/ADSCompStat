@@ -39,7 +39,7 @@ class DataBaseSession(object):
         self.session = app.session_scope()
 
     def _query_master_by_doi(self, doi):
-        return self.session.query(master.master_doi.filter_by(master_doi=doi).all()
+        return self.session.query(master.master_doi).filter_by(master_doi=doi).all()
 
     def _update_master_by_doi(self, row_modeldict):
         doi = row_modeldict.get("master_doi", None)
@@ -50,6 +50,9 @@ class DataBaseSession(object):
             session.rollback()
             session.flush()
             logger.warning("DB write error: %s; Record: %s" % (err, record))
+
+    def _query_bibstem_by_issn(self, issn):
+        return self.session.query(issn_bibstem.bibstem).filter(issn_bibstem.issn == issnString).first()
         
 
 related_bibstems = []
@@ -157,25 +160,23 @@ def task_process_logfile(infile):
 
 def db_query_bibstem(record):
     try:
-        with app.session_scope() as session:
-            issn_list = record.get("publication", {}).get("ISSN", [])
-            bibstem = ""
-            for issn in issn_list:
-                if not bibstem:
-                    issnString = str(issn.get("issnString", ""))
-                    if issnString:
-                        if len(issnString) == 8:
-                            issnString = issnString[0:4] + "-" + issnString[4:]
-                        try:
-                            bibstem_result = (
-                                session.query(issn_bibstem.bibstem)
-                                .filter(issn_bibstem.issn == issnString)
-                                .first()
-                            )
-                            if bibstem_result:
-                                bibstem = bibstem_result[0]
-                        except Exception as err:
-                            logger.warning("Error from database call: %s" % err)
+        issn_list = record.get("publication", {}).get("ISSN", [])
+        bibstem = ""
+        for issn in issn_list:
+            if not bibstem:
+                issnString = str(issn.get("issnString", ""))
+                if issnString:
+                    if len(issnString) == 8:
+                        issnString = issnString[0:4] + "-" + issnString[4:]
+                    try:
+                        db = DataBaseSession()
+                        bibstem_result = (
+                            db._query_bibstem_by_issn(issnString)
+                        )
+                        if bibstem_result:
+                            bibstem = bibstem_result[0]
+                    except Exception as err:
+                        logger.warning("Error from database call: %s" % err)
     except Exception as err:
         raise BibstemLookupException(err)
     else:

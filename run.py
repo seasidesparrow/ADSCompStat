@@ -192,7 +192,7 @@ def main():
         else:
             logfiles = get_logs(args)
             if not logfiles:
-                logger.warn("No logfiles found! Nothing to do -- stopping.")
+                logger.warning("No logfiles found! Nothing to do -- stopping.")
             else:
                 for logfile in logfiles:
                     tasks.task_process_logfile.delay(logfile)
