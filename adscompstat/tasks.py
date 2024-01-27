@@ -32,6 +32,26 @@ app.conf.CELERY_QUEUES = (
     Queue("compute-stats", app.exchange, routing_key="compute-stats"),
 )
 
+
+class DataBaseSession(object):
+
+    def __init__(self):
+        self.session = app.session_scope()
+
+    def _query_master_by_doi(self, doi):
+        return self.session.query(master.master_doi.filter_by(master_doi=doi).all()
+
+    def _update_master_by_doi(self, row_modeldict):
+        doi = row_modeldict.get("master_doi", None)
+        try:
+            self.session.query(master).filter_by(master_doi=doi).update(row_modeldict)
+            self.session.commit()
+        except Exception as err:
+            session.rollback()
+            session.flush()
+            logger.warning("DB write error: %s; Record: %s" % (err, record))
+        
+
 related_bibstems = []
 related_bibs_file = app.conf.get("JOURNALSDB_RELATED_BIBSTEMS", None)
 if related_bibs_file:
@@ -47,73 +67,62 @@ else:
 
 # No delay/queue, synchronous only
 def task_clear_classic_data():
-    with app.session_scope() as session:
-        try:
-            session.query(identifier_doi).delete()
-            session.query(alt_identifiers).delete()
-            session.query(issn_bibstem).delete()
-            session.commit()
-            logger.info("Existing classic data tables cleared.")
-        except Exception as err:
-            session.rollback()
-            session.flush()
-            logger.error("Failed to clear classic data tables: %s" % err)
+    db = DataBaseSession()
+    try:
+        db.session.query(identifier_doi).delete()
+        db.session.query(alt_identifiers).delete()
+        db.session.query(issn_bibstem).delete()
+        db.session.commit()
+        logger.info("Existing classic data tables cleared.")
+    except Exception as err:
+        db.session.rollback()
+        db.session.flush()
+        logger.error("Failed to clear classic data tables: %s" % err)
 
 
 # No delay/queue, synchronous only
 def task_write_block_to_db(table, datablock):
-    with app.session_scope() as session:
-        try:
-            session.bulk_insert_mappings(table, datablock)
-            session.commit()
-        except Exception as err:
-            session.rollback()
-            session.flush()
-            logger.warning("Failed to write data block: %s" % err)
+    db = DataBaseSession()
+    try:
+        db.session.bulk_insert_mappings(table, datablock)
+        db.session.commit()
+    except Exception as err:
+        db.session.rollback()
+        db.session.flush()
+        logger.warning("Failed to write data block: %s" % err)
 
 
 @app.task(queue="write-db")
 def task_write_matched_record_to_db(record):
-    with app.session_scope() as session:
+    if record:
+        doi = record[1]
+        row = master(
+            harvest_filepath=record[0],
+            master_doi=record[1],
+            issns=record[2],
+            db_origin="Crossref",
+            master_bibdata=record[3],
+            classic_match=record[4],
+            status=record[5],
+            matchtype=record[6],
+            bibcode_meta=record[7],
+            bibcode_classic=record[8],
+            notes=record[9],
+        )
+        db = DataBaseSession()
         try:
-            doi = record[1]
-            result = session.query(master.master_doi).filter_by(master_doi=doi).all()
+            result = db._query_master_by_doi(doi)
             if not result:
-                row = master(
-                    harvest_filepath=record[0],
-                    master_doi=record[1],
-                    issns=record[2],
-                    db_origin="Crossref",
-                    master_bibdata=record[3],
-                    classic_match=record[4],
-                    status=record[5],
-                    matchtype=record[6],
-                    bibcode_meta=record[7],
-                    bibcode_classic=record[8],
-                    notes=record[9],
-                )
-                session.add(row)
-                session.commit()
+                db.session.add(row)
+                db.session.commit()
             else:
-                update = {
-                    "harvest_filepath": record[0],
-                    "master_doi": record[1],
-                    "issns": record[2],
-                    "db_origin": "Crossref",
-                    "master_bibdata": record[3],
-                    "classic_match": record[4],
-                    "status": record[5],
-                    "matchtype": record[6],
-                    "bibcode_meta": record[7],
-                    "bibcode_classic": record[8],
-                    "notes": record[9],
-                }
-                session.query(master).filter_by(master_doi=doi).update(update)
-                session.commit()
+                db._update_master_by_doi(row)
         except Exception as err:
-            session.rollback()
-            session.flush()
-            logger.warning("DB write error: %s; Record: %s" % (err, record))
+            db.session.rollback()
+            db.session.flush()
+            logger.error("DB: failed to add/update row in master: %s" % err)
+    else:
+        logger.info("Null record passed to write-db")
 
 
 @app.task(queue="get-logfiles")
