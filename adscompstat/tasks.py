@@ -15,6 +15,7 @@ from adscompstat.models import CompStatIdentDoi as identifier_doi
 from adscompstat.models import CompStatIssnBibstem as issn_bibstem
 from adscompstat.models import CompStatMaster as master
 from adscompstat.models import CompStatSummary as summary
+from adscompstat.database import DataBaseSession
 
 proj_home = os.path.realpath(os.path.join(os.path.dirname(__file__), "../"))
 app = app_module.ADSCompStatCelery(
@@ -32,123 +33,6 @@ app.conf.CELERY_QUEUES = (
     Queue("compute-stats", app.exchange, routing_key="compute-stats"),
 )
 
-
-class DataBaseSession(object):
-
-    def __init__(self):
-        self.session = app.session_scope()
-
-    def _query_master_by_doi(self, doi):
-        return self.session.query(master.master_doi).filter_by(master_doi=doi).all()
-
-    def _update_master_by_doi(self, row_modeldict):
-        doi = row_modeldict.get("master_doi", None)
-        try:
-            self.session.query(master).filter_by(master_doi=doi).update(row_modeldict)
-            self.session.commit()
-        except Exception as err:
-            session.rollback()
-            session.flush()
-            logger.warning("DB write error: %s; Record: %s" % (err, record))
-
-    def _query_bibstem_by_issn(self, issn):
-        try:
-            results = self.session.query(issn_bibstem.bibstem).filter(issn_bibstem.issn == issnString).first()
-            return results
-        except Exception as err:
-            logger.warning("Unable to get bibstem from issn %s: %s" % (issn, err))
-        
-    def _query_completeness_per_bibstem(self, bibstem):
-        try:
-            result = (
-                self.session.query(
-                    func.substr(master.bibcode_meta, 10, 5),
-                    master.status,
-                    master.matchtype,
-                    func.count(master.bibcode_meta),
-                )
-                .filter(func.substr(master.bibcode_meta, 5, 5) == bibstem)
-                .group_by(func.substr(master.bibcode_meta, 10, 5), master.status, master.matchtype)
-                .all()
-            )
-            return result
-        except Exception as err:
-            logger.warning("Error querying completeness for bibstem %s: %s" % (bibstem, err))
-
-
-    def _query_classic_bibcodes(self, doi, bibcode):
-        bibcodesFromDoi = []
-        bibcodesFromBib = []
-        try:
-            bibcodesFromDoi = (
-                self.session.query(
-                    alt_identifiers.identifier,
-                    alt_identifiers.canonical_id,
-                    alt_identifiers.idtype,
-                )
-                .join(identifier_doi, alt_identifiers.canonical_id == identifier_doi.identifier)
-                .filter(identifier_doi.doi == doi)
-                .all()
-            )
-            if bibcode:
-                bibcodesFromBib = (
-                    self.session.query(
-                        alt_identifiers.identifier,
-                        alt_identifiers.canonical_id,
-                        alt_identifiers.idtype,
-                    )
-                    .filter(alt_identifiers.identifier == bibcode)
-                    .all()
-                )
-        except Exception as err:
-            raise FetchClassicBibException(err)
-        else:
-            return bibcodesFromDoi, bibcodesFromBib
-      
-    def _write_completeness_summary(self, summary):
-        try:
-            self.session.add(summary)
-            self.session.commit()
-        except Exception as err:
-            self.session.rollback()
-            self.session.flush()
-            logger.warning(
-                "Error writing summary data for %s, v %s: %s" % (bibstem, k, err)
-            )
-
-    def _query_retry_files(self, rec_type):
-        try:
-            result = self.session.query(master.harvest_filepath).filter(master.matchtype == rec_type).all()
-            )
-            return result
-        except Exception as err:
-            logger.error("Unable to retrieve retry files of type %s: %s" % (rec_type, err))
-
-    def _query_summary_bibstems(self):
-        try:
-            bibstems = self.session.query(summary.bibstem).distinct().all()
-            bibstems = [x[0] for x in bibstems]
-            return bibstems
-        except Exception as err:
-            logger.error("Failed to get bibstems from summary: %s" % err)
-
-    def _query_summary_single_bibstem(self, bibstem):
-        try:
-            result = self.session.query(
-                    summary.bibstem,
-                    summary.volume,
-                    summary.complete_fraction,
-                    summary.paper_count,
-                )
-                .filter(summary.bibstem == bibstem)
-                .all()
-            )
-            return result
-        except Exception as err:
-            logger.error("Failed to get completeness for bibstem %s: %s" % (bibstem, err))
-
-
-
 related_bibstems = []
 related_bibs_file = app.conf.get("JOURNALSDB_RELATED_BIBSTEMS", None)
 if related_bibs_file:
@@ -160,33 +44,6 @@ if related_bibs_file:
         logger.warning("Unable to load related bibstems list: %s" % err)
 else:
     logger.warning("Related bibstems filename not set.")
-
-
-# No delay/queue, synchronous only
-def task_clear_classic_data():
-    db = DataBaseSession()
-    try:
-        db.session.query(identifier_doi).delete()
-        db.session.query(alt_identifiers).delete()
-        db.session.query(issn_bibstem).delete()
-        db.session.commit()
-        logger.info("Existing classic data tables cleared.")
-    except Exception as err:
-        db.session.rollback()
-        db.session.flush()
-        logger.error("Failed to clear classic data tables: %s" % err)
-
-
-# No delay/queue, synchronous only
-def task_write_block_to_db(table, datablock):
-    db = DataBaseSession()
-    try:
-        db.session.bulk_insert_mappings(table, datablock)
-        db.session.commit()
-    except Exception as err:
-        db.session.rollback()
-        db.session.flush()
-        logger.warning("Failed to write data block: %s" % err)
 
 
 @app.task(queue="write-db")
@@ -468,20 +325,19 @@ def task_completeness_per_bibstem(bibstem):
                 db = DataBaseSession()
                 db._write_completeness_summary(outrec)
 
+
+
 def task_do_all_completeness():
+    db = DataBaseSession()
     try:
-        with app.session_scope() as session:
-            bibstems = session.query(func.substr(master.bibcode_meta, 5, 5)).distinct().all()
-            if bibstems:
-                session.query(summary).delete()
-                session.commit()
-            else:
-                logger.warning("Completeness summary table wasn't deleted")
+        bibstems = db._query_unique_bibstems()
+        if bibstems:
+            db._delete_existing_summary(self):
         bibstems = [x[0] for x in bibstems]
         for bibstem in bibstems:
             task_completeness_per_bibstem.delay(bibstem)
     except Exception as err:
-        logger.error("Failed to clear classic data tables: %s" % err)
+        logger.error("Failed to compute summary: %s" % err)
 
 
 def task_export_completeness_to_json():
