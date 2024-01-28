@@ -332,7 +332,7 @@ def task_do_all_completeness():
     try:
         bibstems = db._query_unique_bibstems()
         if bibstems:
-            db._delete_existing_summary(self):
+            db._delete_existing_summary()
         bibstems = [x[0] for x in bibstems]
         for bibstem in bibstems:
             task_completeness_per_bibstem.delay(bibstem)

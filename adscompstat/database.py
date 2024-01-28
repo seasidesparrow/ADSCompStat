@@ -21,6 +21,9 @@ app = app_module.ADSCompStatCelery(
 )
 logger = app.logger
 
+class DBClearClassicException(Exception):
+    pass
+
 
 class DataBaseSession(object):
 
@@ -34,6 +37,10 @@ class DataBaseSession(object):
             self.session.query(issn_bibstem).delete()
             self.session.commit()
             logger.info("Existing classic data tables cleared.")
+        except Exception as err:
+            session.rollback()
+            session.flush()
+            raise DBClearClassicException("Existing classic data tables not cleared: %s" % err)
 
     def _query_master_by_doi(self, doi):
         return self.session.query(master.master_doi).filter_by(master_doi=doi).all()
@@ -116,7 +123,6 @@ class DataBaseSession(object):
     def _query_retry_files(self, rec_type):
         try:
             result = self.session.query(master.harvest_filepath).filter(master.matchtype == rec_type).all()
-            )
             return result
         except Exception as err:
             logger.error("Unable to retrieve retry files of type %s: %s" % (rec_type, err))
@@ -136,10 +142,7 @@ class DataBaseSession(object):
                     summary.volume,
                     summary.complete_fraction,
                     summary.paper_count,
-                )
-                .filter(summary.bibstem == bibstem)
-                .all()
-            )
+                    ).filter(summary.bibstem == bibstem).all()
             return result
         except Exception as err:
             logger.error("Failed to get completeness for bibstem %s: %s" % (bibstem, err))
@@ -151,7 +154,7 @@ class DataBaseSession(object):
         except Exception as err:
             logger.warning("No bibstems from master: %s" % err)
 
-    def _delete_previous_summary(self):
+    def _delete_existing_summary(self):
         try:
             self.session.query(summary).delete()
             self.session.commit()
