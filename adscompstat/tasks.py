@@ -52,8 +52,102 @@ class DataBaseSession(object):
             logger.warning("DB write error: %s; Record: %s" % (err, record))
 
     def _query_bibstem_by_issn(self, issn):
-        return self.session.query(issn_bibstem.bibstem).filter(issn_bibstem.issn == issnString).first()
+        try:
+            results = self.session.query(issn_bibstem.bibstem).filter(issn_bibstem.issn == issnString).first()
+            return results
+        except Exception as err:
+            logger.warning("Unable to get bibstem from issn %s: %s" % (issn, err))
         
+    def _query_completeness_per_bibstem(self, bibstem):
+        try:
+            result = (
+                self.session.query(
+                    func.substr(master.bibcode_meta, 10, 5),
+                    master.status,
+                    master.matchtype,
+                    func.count(master.bibcode_meta),
+                )
+                .filter(func.substr(master.bibcode_meta, 5, 5) == bibstem)
+                .group_by(func.substr(master.bibcode_meta, 10, 5), master.status, master.matchtype)
+                .all()
+            )
+            return result
+        except Exception as err:
+            logger.warning("Error querying completeness for bibstem %s: %s" % (bibstem, err))
+
+
+    def _query_classic_bibcodes(self, doi, bibcode):
+        bibcodesFromDoi = []
+        bibcodesFromBib = []
+        try:
+            bibcodesFromDoi = (
+                self.session.query(
+                    alt_identifiers.identifier,
+                    alt_identifiers.canonical_id,
+                    alt_identifiers.idtype,
+                )
+                .join(identifier_doi, alt_identifiers.canonical_id == identifier_doi.identifier)
+                .filter(identifier_doi.doi == doi)
+                .all()
+            )
+            if bibcode:
+                bibcodesFromBib = (
+                    self.session.query(
+                        alt_identifiers.identifier,
+                        alt_identifiers.canonical_id,
+                        alt_identifiers.idtype,
+                    )
+                    .filter(alt_identifiers.identifier == bibcode)
+                    .all()
+                )
+        except Exception as err:
+            raise FetchClassicBibException(err)
+        else:
+            return bibcodesFromDoi, bibcodesFromBib
+      
+    def _write_completeness_summary(self, summary):
+        try:
+            self.session.add(summary)
+            self.session.commit()
+        except Exception as err:
+            self.session.rollback()
+            self.session.flush()
+            logger.warning(
+                "Error writing summary data for %s, v %s: %s" % (bibstem, k, err)
+            )
+
+    def _query_retry_files(self, rec_type):
+        try:
+            result = self.session.query(master.harvest_filepath).filter(master.matchtype == rec_type).all()
+            )
+            return result
+        except Exception as err:
+            logger.error("Unable to retrieve retry files of type %s: %s" % (rec_type, err))
+
+    def _query_summary_bibstems(self):
+        try:
+            bibstems = self.session.query(summary.bibstem).distinct().all()
+            bibstems = [x[0] for x in bibstems]
+            return bibstems
+        except Exception as err:
+            logger.error("Failed to get bibstems from summary: %s" % err)
+
+    def _query_summary_single_bibstem(self, bibstem):
+        try:
+            result = self.session.query(
+                    summary.bibstem,
+                    summary.volume,
+                    summary.complete_fraction,
+                    summary.paper_count,
+                )
+                .filter(summary.bibstem == bibstem)
+                .all()
+            )
+            return result
+        except Exception as err:
+            logger.error("Failed to get completeness for bibstem %s: %s" % (bibstem, err))
+
+
 
 related_bibstems = []
 related_bibs_file = app.conf.get("JOURNALSDB_RELATED_BIBSTEMS", None)
@@ -183,37 +277,6 @@ def db_query_bibstem(record):
         return bibstem
 
 
-def db_query_classic_bibcodes(doi, bibcode):
-    try:
-        bibcodesFromDoi = []
-        bibcodesFromBib = []
-        with app.session_scope() as session:
-            bibcodesFromDoi = (
-                session.query(
-                    alt_identifiers.identifier,
-                    alt_identifiers.canonical_id,
-                    alt_identifiers.idtype,
-                )
-                .join(identifier_doi, alt_identifiers.canonical_id == identifier_doi.identifier)
-                .filter(identifier_doi.doi == doi)
-                .all()
-            )
-        if bibcode:
-            bibcodesFromBib = (
-                session.query(
-                    alt_identifiers.identifier,
-                    alt_identifiers.canonical_id,
-                    alt_identifiers.idtype,
-                )
-                .filter(alt_identifiers.identifier == bibcode)
-                .all()
-            )
-    except Exception as err:
-        raise FetchClassicBibException(err)
-    else:
-        return bibcodesFromDoi, bibcodesFromBib
-
-
 @app.task(queue="process-meta")
 def task_process_meta(infile_batch):
     """
@@ -284,7 +347,8 @@ def task_process_meta(infile_batch):
                         bibstem = db_query_bibstem(ingestRecord)
                         bibcode = bibgen.make_bibcode(ingestRecord, bibstem=bibstem)
                         doi = processedRecord.get("master_doi", "")
-                        (bibcodesFromDoi, bibcodesFromBib) = db_query_classic_bibcodes(
+                        db = DataBaseSession()
+                        (bibcodesFromDoi, bibcodesFromBib) = db._query_classic_bibcodes(
                             doi, bibcode
                         )
                         xmatch = CrossrefMatcher(related_bibstems=related_bibstems)
@@ -364,18 +428,10 @@ def task_process_meta(infile_batch):
 def task_completeness_per_bibstem(bibstem):
     try:
         bibstem = bibstem.ljust(5, ".")
-        with app.session_scope() as session:
-            result = (
-                session.query(
-                    func.substr(master.bibcode_meta, 10, 5),
-                    master.status,
-                    master.matchtype,
-                    func.count(master.bibcode_meta),
-                )
-                .filter(func.substr(master.bibcode_meta, 5, 5) == bibstem)
-                .group_by(func.substr(master.bibcode_meta, 10, 5), master.status, master.matchtype)
-                .all()
-            )
+        db = DataBaseSession()
+        result = (
+            db._query_completeness_per_bibstem(bibstem)
+        )
     except Exception as err:
         logger.warning("Failed to get completeness summary for bibstem %s: %s" % (bibstem, err))
     else:
@@ -409,17 +465,8 @@ def task_completeness_per_bibstem(bibstem):
                     % (bibstem, k, err)
                 )
             else:
-                with app.session_scope() as session:
-                    try:
-                        session.add(outrec)
-                        session.commit()
-                    except Exception as err:
-                        session.rollback()
-                        session.flush()
-                        logger.warning(
-                            "Error writing summary data for %s, v %s: %s" % (bibstem, k, err)
-                        )
-
+                db = DataBaseSession()
+                db._write_completeness_summary(outrec)
 
 def task_do_all_completeness():
     try:
@@ -438,67 +485,55 @@ def task_do_all_completeness():
 
 
 def task_export_completeness_to_json():
-    with app.session_scope() as session:
-        try:
-            allData = []
-            bibstems = session.query(summary.bibstem).distinct().all()
-            bibstems = [x[0] for x in bibstems]
-            for bib in bibstems:
-                completeness = []
-                result = (
-                    session.query(
-                        summary.bibstem,
-                        summary.volume,
-                        summary.complete_fraction,
-                        summary.paper_count,
-                    )
-                    .filter(summary.bibstem == bib)
-                    .all()
-                )
-                paperCount = 0
-                averageCompleteness = 0.0
-                for r in result:
-                    if type(r[2]) == float:
-                        r2_export = math.floor(10000 * r[2] + 0.5) / 10000.0
-                    else:
-                        r2_export = r[2]
-                    completeness.append({"volume": r[1], "completeness_fraction": r2_export})
-                    paperCount += r[3]
-                    averageCompleteness += r[3] * r[2]
-                averageCompleteness = averageCompleteness / paperCount
-                avg_export = math.floor(10000 * averageCompleteness + 0.5) / 10000.0
-                allData.append(
-                    {
-                        "bibstem": bib,
-                        "completeness_fraction": avg_export,
-                        "completeness_details": completeness,
-                    }
-                )
-            if allData:
-                utils.export_completeness_data(
-                    allData, app.conf.get("COMPLETENESS_EXPORT_FILE", None)
-                )
-        except Exception as err:
-            logger.error("Unable to export completeness data to disk: %s" % err)
+    db = DataBaseSession()
+    try:
+        allData = []
+        bibstems = db._query_summary_bibstems()
+        for bib in bibstems:
+            completeness = []
+            result = db._query_summary_single_bibstem(bib)
+            paperCount = 0
+            averageCompleteness = 0.0
+            for r in result:
+                if type(r[2]) == float:
+                    r2_export = math.floor(10000 * r[2] + 0.5) / 10000.0
+                else:
+                    r2_export = r[2]
+                completeness.append({"volume": r[1], "completeness_fraction": r2_export})
+                paperCount += r[3]
+                averageCompleteness += r[3] * r[2]
+            averageCompleteness = averageCompleteness / paperCount
+            avg_export = math.floor(10000 * averageCompleteness + 0.5) / 10000.0
+            allData.append(
+                {
+                    "bibstem": bib,
+                    "completeness_fraction": avg_export,
+                    "completeness_details": completeness,
+                }
+            )
+        if allData:
+            utils.export_completeness_data(
+                allData, app.conf.get("COMPLETENESS_EXPORT_FILE", None)
+            )
+    except Exception as err:
+        logger.error("Unable to export completeness data to disk: %s" % err)
 
 
 @app.task(queue="get-logfiles")
 def task_retry_records(rec_type):
-    with app.session_scope() as session:
-        batch_count = app.conf.get("RECORDS_PER_BATCH", 100)
-        try:
-            result = (
-                session.query(master.harvest_filepath).filter(master.matchtype == rec_type).all()
-            )
-            batch = []
-            for r in result:
-                batch.append(r[0])
-                if len(batch) == batch_count:
-                    logger.debug("Calling task_process_meta with batch '%s'" % batch)
-                    task_process_meta.delay(batch)
-                    batch = []
-            if len(batch):
+    batch_count = app.conf.get("RECORDS_PER_BATCH", 100)
+    try:
+        db = DataBaseSession()
+        result = db._query_retry_files(rec_type)
+        batch = []
+        for r in result:
+            batch.append(r[0])
+            if len(batch) == batch_count:
                 logger.debug("Calling task_process_meta with batch '%s'" % batch)
                 task_process_meta.delay(batch)
-        except Exception as err:
-            logger.warning('Error reprocessing records of matchtype "%s": %s' % (rec_type, err))
+                batch = []
+        if len(batch):
+            logger.debug("Calling task_process_meta with batch '%s'" % batch)
+            task_process_meta.delay(batch)
+    except Exception as err:
+        logger.warning('Error reprocessing records of matchtype "%s": %s' % (rec_type, err))
