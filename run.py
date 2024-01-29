@@ -4,6 +4,7 @@ import os
 from adsputils import load_config, setup_logging
 
 from adscompstat import tasks, utils
+from adscompstat import database as db
 from adscompstat.exceptions import (
     DBClearException,
     DBWriteException,
@@ -125,7 +126,7 @@ def write_to_database(table_def, data):
                     "Writing to db: %s of %s rows remaining" % (len(data) - i, total_rows)
                 )
                 insertblock = data[i : (i + blocksize)]
-                tasks.task_write_block_to_db(table_def, insertblock)
+                tasks.task_write_block(table_def, insertblock)
                 i += blocksize
     except Exception as err:
         raise DBWriteException(err)

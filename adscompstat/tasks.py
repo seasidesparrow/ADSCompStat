@@ -46,6 +46,13 @@ else:
     logger.warning("Related bibstems filename not set.")
 
 
+def task_write_block(table, datablock):
+    try:
+        db.write_block(app, table, datablock):
+    except Exception as err:
+        logger.warning("Unable to write block to db: %s" % err)
+
+
 @app.task(queue="write-db")
 def task_write_matched_record_to_db(record):
     if record:
