@@ -46,6 +46,12 @@ else:
     logger.warning("Related bibstems filename not set.")
 
 
+def task_clear_classic_data():
+    try:
+        db.clear_classic_data(app)
+    except Exception as err:
+        logger.warning("Unable to clear classic data: %s" % err)
+
 def task_write_block(table, datablock):
     try:
         db.write_block(app, table, datablock)
