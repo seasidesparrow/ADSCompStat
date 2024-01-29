@@ -156,7 +156,7 @@ def query_summary_single_bibstem(app, bibstem):
 def update_master_by_doi(app, row_modeldict):
     with app.session_scope() as session:
         try:
-            doi = row_modeldict.get("master_doi", None)
+            doi = row_modeldict.toJSON.get("master_doi", None)
             session.query(master).filter_by(master_doi=doi).update(row_modeldict)
             session.commit()
         except Exception as err:
