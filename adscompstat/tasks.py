@@ -378,17 +378,17 @@ def task_export_completeness_to_json():
 def task_retry_records(rec_type):
     batch_count = app.conf.get("RECORDS_PER_BATCH", 100)
     try:
-        db = DataBaseSession()
-        result = db.query_retry_files(rec_type)
-        batch = []
-        for r in result:
-            batch.append(r[0])
-            if len(batch) == batch_count:
+        with DataBaseSession() as db:
+            result = db.query_retry_files(rec_type)
+            batch = []
+            for r in result:
+                batch.append(r[0])
+                if len(batch) == batch_count:
+                    logger.debug("Calling task_process_meta with batch '%s'" % batch)
+                    task_process_meta.delay(batch)
+                    batch = []
+            if len(batch):
                 logger.debug("Calling task_process_meta with batch '%s'" % batch)
                 task_process_meta.delay(batch)
-                batch = []
-        if len(batch):
-            logger.debug("Calling task_process_meta with batch '%s'" % batch)
-            task_process_meta.delay(batch)
     except Exception as err:
         logger.warning('Error reprocessing records of matchtype "%s": %s' % (rec_type, err))
