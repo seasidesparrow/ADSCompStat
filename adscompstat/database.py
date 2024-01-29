@@ -68,7 +68,7 @@ def query_bibstem_by_issn(app, issn):
             return session.query(issn_bibstem.bibstem).filter(issn_bibstem.issn == issn).first()
         except Exception as err:
             raise DBQueryException("Unable to get bibstem from issn %s: %s" % (issn, err))
-        
+
 def query_completeness_per_bibstem(app, bibstem):
     with app.session_scope() as session:
         try:
@@ -163,7 +163,7 @@ def update_master_by_doi(app, update):
             session.rollback()
             session.flush()
             raise DBWriteException("Error writing record to master: %s; row data: %s" % (err, update))
-  
+
 def write_completeness_summary(app, summary):
     with app.session_scope() as session:
         try:
@@ -188,21 +188,6 @@ def write_matched_record(app, result, record):
     with app.session_scope() as session:
         try:
             if result:
-                row = master(
-                    harvest_filepath=record[0],
-                    master_doi=record[1],
-                    issns=record[2],
-                    db_origin="Crossref",
-                    master_bibdata=record[3],
-                    classic_match=record[4],
-                    status=record[5],
-                    matchtype=record[6],
-                    bibcode_meta=record[7],
-                    bibcode_classic=record[8],
-                    notes=record[9],
-                )
-                update_master_by_doi(app, row)
-            else:
                 update = {
                     "harvest_filepath": record[0],
                     "master_doi": record[1],
@@ -216,7 +201,22 @@ def write_matched_record(app, result, record):
                     "bibcode_classic": record[8],
                     "notes": record[9],
                 }
-                session.add(update)
+                update_master_by_doi(app, update)
+            else:
+                row = master(
+                    harvest_filepath=record[0],
+                    master_doi=record[1],
+                    issns=record[2],
+                    db_origin="Crossref",
+                    master_bibdata=record[3],
+                    classic_match=record[4],
+                    status=record[5],
+                    matchtype=record[6],
+                    bibcode_meta=record[7],
+                    bibcode_classic=record[8],
+                    notes=record[9],
+                )
+                session.add(row)
                 session.commit()
         except Exception as err:
             session.rollback()
