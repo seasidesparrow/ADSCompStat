@@ -1,11 +1,9 @@
 import json
-import math
 import os
 
 from sqlalchemy import func
 
 from adscompstat import app as app_module
-from adscompstat.exceptions import BibstemLookupException, FetchClassicBibException
 from adscompstat.models import CompStatAltIdents as alt_identifiers
 from adscompstat.models import CompStatIdentDoi as identifier_doi
 from adscompstat.models import CompStatIssnBibstem as issn_bibstem
@@ -19,50 +17,61 @@ app = app_module.ADSCompStatCelery(
     config=globals().get("config", {}),
     local_config=globals().get("local_config", {}),
 )
-logger = app.logger
 
 class DBClearClassicException(Exception):
     pass
 
 
+class DBClearSummaryException(Exception):
+    pass
+
+
+class DBWriteException(Exception):
+    pass
+
+
+class DBQueryException(Exception):
+    pass
+
+
 class DataBaseSession(object):
 
-    def __init__(self):
+    def _init__(self):
         self.session = app.session_scope()
 
-    def _clear_classic_data(self):
+    def clear_classic_data(self):
         try:
             self.session.query(identifier_doi).delete()
             self.session.query(alt_identifiers).delete()
             self.session.query(issn_bibstem).delete()
             self.session.commit()
-            logger.info("Existing classic data tables cleared.")
         except Exception as err:
-            session.rollback()
-            session.flush()
+            self.session.rollback()
+            self.session.flush()
             raise DBClearClassicException("Existing classic data tables not cleared: %s" % err)
 
-    def _query_master_by_doi(self, doi):
-        return self.session.query(master.master_doi).filter_by(master_doi=doi).all()
-
-    def _update_master_by_doi(self, row_modeldict):
-        doi = row_modeldict.get("master_doi", None)
+    def clear_summary_data(self):
         try:
-            self.session.query(master).filter_by(master_doi=doi).update(row_modeldict)
+            self.session.query(summary).delete()
             self.session.commit()
         except Exception as err:
-            session.rollback()
-            session.flush()
-            logger.warning("DB write error: %s; Record: %s" % (err, record))
+            self.session.rollback()
+            self.session.flush()
+            raise DBClearSummaryException("Failed to clear summary table: %s" % err)
 
-    def _query_bibstem_by_issn(self, issn):
+    def query_master_by_doi(self, doi):
         try:
-            results = self.session.query(issn_bibstem.bibstem).filter(issn_bibstem.issn == issnString).first()
-            return results
+            return self.session.query(master.master_doi).filter_by(master_doi=doi).all()
         except Exception as err:
-            logger.warning("Unable to get bibstem from issn %s: %s" % (issn, err))
+            raise DBQueryException("Unable to query master by DOI %s: %s" % (doi, err))
+
+    def query_bibstem_by_issn(self, issn):
+        try:
+            return self.session.query(issn_bibstem.bibstem).filter(issn_bibstem.issn == issnString).first()
+        except Exception as err:
+            raise DBQueryException("Unable to get bibstem from issn %s: %s" % (issn, err))
         
-    def _query_completeness_per_bibstem(self, bibstem):
+    def query_completeness_per_bibstem(self, bibstem):
         try:
             result = (
                 self.session.query(
@@ -77,23 +86,23 @@ class DataBaseSession(object):
             )
             return result
         except Exception as err:
-            logger.warning("Error querying completeness for bibstem %s: %s" % (bibstem, err))
+            raise DBQueryException("Error querying completeness for bibstem %s: %s" % (bibstem, err))
 
-
-    def _query_classic_bibcodes(self, doi, bibcode):
+    def query_classic_bibcodes(self, doi, bibcode):
         bibcodesFromDoi = []
         bibcodesFromBib = []
         try:
-            bibcodesFromDoi = (
-                self.session.query(
-                    alt_identifiers.identifier,
-                    alt_identifiers.canonical_id,
-                    alt_identifiers.idtype,
+            if doi:
+                bibcodesFromDoi = (
+                    self.session.query(
+                        alt_identifiers.identifier,
+                        alt_identifiers.canonical_id,
+                        alt_identifiers.idtype,
+                    )
+                    .join(identifier_doi, alt_identifiers.canonical_id == identifier_doi.identifier)
+                    .filter(identifier_doi.doi == doi)
+                    .all()
                 )
-                .join(identifier_doi, alt_identifiers.canonical_id == identifier_doi.identifier)
-                .filter(identifier_doi.doi == doi)
-                .all()
-            )
             if bibcode:
                 bibcodesFromBib = (
                     self.session.query(
@@ -104,38 +113,31 @@ class DataBaseSession(object):
                     .filter(alt_identifiers.identifier == bibcode)
                     .all()
                 )
-        except Exception as err:
-            raise FetchClassicBibException(err)
-        else:
             return bibcodesFromDoi, bibcodesFromBib
-      
-    def _write_completeness_summary(self, summary):
-        try:
-            self.session.add(summary)
-            self.session.commit()
         except Exception as err:
-            self.session.rollback()
-            self.session.flush()
-            logger.warning(
-                "Error writing summary data for %s, v %s: %s" % (bibstem, k, err)
-            )
+            raise DBQueryException(err)
 
-    def _query_retry_files(self, rec_type):
+    def query_retry_files(self, rec_type):
         try:
-            result = self.session.query(master.harvest_filepath).filter(master.matchtype == rec_type).all()
-            return result
+            return self.session.query(master.harvest_filepath).filter(master.matchtype == rec_type).all()
         except Exception as err:
-            logger.error("Unable to retrieve retry files of type %s: %s" % (rec_type, err))
+            raise DBQueryException("Unable to retrieve retry files of type %s: %s" % (rec_type, err))
 
-    def _query_summary_bibstems(self):
+    def query_master_bibstems(self):
+        try:
+            return self.session.query(func.substr(master.bibcode_meta, 5, 5)).distinct().all()
+        except Exception as err:
+            raise DBQueryException("Failed to get unique bibstems from master: %s" % err)
+
+    def query_summary_bibstems(self):
         try:
             bibstems = self.session.query(summary.bibstem).distinct().all()
             bibstems = [x[0] for x in bibstems]
             return bibstems
         except Exception as err:
-            logger.error("Failed to get bibstems from summary: %s" % err)
+            raise DBQueryException("Failed to get bibstems from summary: %s" % err)
 
-    def _query_summary_single_bibstem(self, bibstem):
+    def query_summary_single_bibstem(self, bibstem):
         try:
             result = self.session.query(
                     summary.bibstem,
@@ -145,29 +147,44 @@ class DataBaseSession(object):
                     ).filter(summary.bibstem == bibstem).all()
             return result
         except Exception as err:
-            logger.error("Failed to get completeness for bibstem %s: %s" % (bibstem, err))
+            raise DBQueryException("Failed to get completeness for bibstem %s: %s" % (bibstem, err))
 
-    def _query_unique_bibstems(self):
+    def update_master_by_doi(self, row_modeldict):
         try:
-            bibstems = self.session.query(func.substr(master.bibcode_meta, 5, 5)).distinct().all()
-            return bibstems
-        except Exception as err:
-            logger.warning("No bibstems from master: %s" % err)
-
-    def _delete_existing_summary(self):
-        try:
-            self.session.query(summary).delete()
+            doi = row_modeldict.get("master_doi", None)
+            self.session.query(master).filter_by(master_doi=doi).update(row_modeldict)
             self.session.commit()
         except Exception as err:
             self.session.rollback()
             self.session.flush()
-            logger.error("Unable to clear summary table: %s" % err)
+            raise DBWriteException("Error writing record to master: %s; row data: %s" % (err, row_modeldict))
+      
+    def write_completeness_summary(self, summary):
+        try:
+            self.session.add(summary)
+            self.session.commit()
+        except Exception as err:
+            self.session.rollback()
+            self.session.flush()
+            raise DBWriteException("Error writing summary data: %s" % err)
 
-    def _write_block(self, table, datablock):
+    def write_block(self, table, datablock):
         try:
             self.session.bulk_insert_mappings(table, datablock)
             self.session.commit()
         except Exception as err:
             self.session.rollback()
             self.session.flush()
-            logger.warning("Failed to write data block: %s" % err)
+            raise DBWriteException("Failed to bulk write data block: %s" % err)
+
+    def write_matched_record(self, result, record):
+        try:
+            if result:
+                self.update_master_by_doi(record)
+            else:
+                self.session.add(record)
+                self.session.commit()
+        except Exception as err:
+            self.session.rollback()
+            self.session.flush()
+            raise DBWriteException("Failed to add/update row in master: %s" % err)

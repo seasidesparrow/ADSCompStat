@@ -65,18 +65,12 @@ def task_write_matched_record_to_db(record):
         )
         db = DataBaseSession()
         try:
-            result = db._query_master_by_doi(doi)
-            if not result:
-                db.session.add(row)
-                db.session.commit()
-            else:
-                db._update_master_by_doi(row)
+            result = db.query_master_by_doi(doi)
+            db.write_matched_record(result, row)
         except Exception as err:
-            db.session.rollback()
-            db.session.flush()
-            logger.error("DB: failed to add/update row in master: %s" % err)
+            logger.error("write_matched_record failed: %s" % err)
     else:
-        logger.info("Null record passed to write-db")
+        logger.warning("Null record passed to write_matched_record")
 
 
 @app.task(queue="get-logfiles")
@@ -122,7 +116,7 @@ def db_query_bibstem(record):
                     try:
                         db = DataBaseSession()
                         bibstem_result = (
-                            db._query_bibstem_by_issn(issnString)
+                            db.query_bibstem_by_issn(issnString)
                         )
                         if bibstem_result:
                             bibstem = bibstem_result[0]
@@ -205,7 +199,7 @@ def task_process_meta(infile_batch):
                         bibcode = bibgen.make_bibcode(ingestRecord, bibstem=bibstem)
                         doi = processedRecord.get("master_doi", "")
                         db = DataBaseSession()
-                        (bibcodesFromDoi, bibcodesFromBib) = db._query_classic_bibcodes(
+                        (bibcodesFromDoi, bibcodesFromBib) = db.query_classic_bibcodes(
                             doi, bibcode
                         )
                         xmatch = CrossrefMatcher(related_bibstems=related_bibstems)
@@ -287,7 +281,7 @@ def task_completeness_per_bibstem(bibstem):
         bibstem = bibstem.ljust(5, ".")
         db = DataBaseSession()
         result = (
-            db._query_completeness_per_bibstem(bibstem)
+            db.query_completeness_per_bibstem(bibstem)
         )
     except Exception as err:
         logger.warning("Failed to get completeness summary for bibstem %s: %s" % (bibstem, err))
@@ -322,18 +316,23 @@ def task_completeness_per_bibstem(bibstem):
                     % (bibstem, k, err)
                 )
             else:
-                db = DataBaseSession()
-                db._write_completeness_summary(outrec)
+                try:
+                    db = DataBaseSession()
+                    db.write_completeness_summary(outrec)
+                except Exception as err:
+                    logger.warning(
+                        "Error writing completeness data to db: %s" % err
+                    )
 
 
 
 def task_do_all_completeness():
     db = DataBaseSession()
     try:
-        bibstems = db._query_unique_bibstems()
+        bibstems = db.query_summary_bibstems()
         if bibstems:
             db._delete_existing_summary()
-        bibstems = [x[0] for x in bibstems]
+        # bibstems = [x[0] for x in bibstems]
         for bibstem in bibstems:
             task_completeness_per_bibstem.delay(bibstem)
     except Exception as err:
@@ -341,13 +340,13 @@ def task_do_all_completeness():
 
 
 def task_export_completeness_to_json():
-    db = DataBaseSession()
     try:
+        db = DataBaseSession()
         allData = []
-        bibstems = db._query_summary_bibstems()
+        bibstems = db.query_summary_bibstems()
         for bib in bibstems:
             completeness = []
-            result = db._query_summary_single_bibstem(bib)
+            result = db.query_summary_single_bibstem(bib)
             paperCount = 0
             averageCompleteness = 0.0
             for r in result:
