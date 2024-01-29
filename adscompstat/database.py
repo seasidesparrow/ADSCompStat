@@ -19,19 +19,19 @@ local_config=globals().get("local_config", {}),
 )
 
 class DBClearClassicException(Exception):
-pass
+    pass
 
 
 class DBClearSummaryException(Exception):
-pass
+    pass
 
 
 class DBWriteException(Exception):
-pass
+    pass
 
 
 class DBQueryException(Exception):
-pass
+    pass
 
 
 def clear_classic_data():
