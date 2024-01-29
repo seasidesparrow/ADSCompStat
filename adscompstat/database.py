@@ -162,7 +162,7 @@ def update_master_by_doi(app, update):
         except Exception as err:
             session.rollback()
             session.flush()
-            raise DBWriteException("Error writing record to master: %s; row data: %s" % (err, row_modeldict))
+            raise DBWriteException("Error writing record to master: %s; row data: %s" % (err, update))
   
 def write_completeness_summary(app, summary):
     with app.session_scope() as session:
