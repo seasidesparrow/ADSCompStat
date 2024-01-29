@@ -65,7 +65,7 @@ def query_master_by_doi(app, doi):
 def query_bibstem_by_issn(app, issn):
     with app.session_scope() as session:
         try:
-            return session.query(issn_bibstem.bibstem).filter(issn_bibstem.issn == issnString).first()
+            return session.query(issn_bibstem.bibstem).filter(issn_bibstem.issn == issn).first()
         except Exception as err:
             raise DBQueryException("Unable to get bibstem from issn %s: %s" % (issn, err))
         
