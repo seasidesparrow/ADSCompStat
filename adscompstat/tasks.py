@@ -48,7 +48,7 @@ else:
 
 def task_write_block(table, datablock):
     try:
-        db.write_block(app, table, datablock):
+        db.write_block(app, table, datablock)
     except Exception as err:
         logger.warning("Unable to write block to db: %s" % err)
 
