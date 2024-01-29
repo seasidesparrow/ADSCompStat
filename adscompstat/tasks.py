@@ -331,7 +331,7 @@ def task_do_all_completeness():
     try:
         bibstems = db.query_summary_bibstems()
         if bibstems:
-            db._delete_existing_summary()
+            db.clear_summary_data()
         # bibstems = [x[0] for x in bibstems]
         for bibstem in bibstems:
             task_completeness_per_bibstem.delay(bibstem)
@@ -379,7 +379,7 @@ def task_retry_records(rec_type):
     batch_count = app.conf.get("RECORDS_PER_BATCH", 100)
     try:
         db = DataBaseSession()
-        result = db._query_retry_files(rec_type)
+        result = db.query_retry_files(rec_type)
         batch = []
         for r in result:
             batch.append(r[0])
