@@ -8,6 +8,7 @@ from sqlalchemy import func
 
 from adscompstat import app as app_module
 from adscompstat import utils
+from adscompstat import database as db
 from adscompstat.exceptions import BibstemLookupException, FetchClassicBibException
 from adscompstat.match import CrossrefMatcher
 from adscompstat.models import CompStatAltIdents as alt_identifiers
@@ -15,7 +16,6 @@ from adscompstat.models import CompStatIdentDoi as identifier_doi
 from adscompstat.models import CompStatIssnBibstem as issn_bibstem
 from adscompstat.models import CompStatMaster as master
 from adscompstat.models import CompStatSummary as summary
-from adscompstat.database import DataBaseSession
 
 proj_home = os.path.realpath(os.path.join(os.path.dirname(__file__), "../"))
 app = app_module.ADSCompStatCelery(
@@ -63,7 +63,6 @@ def task_write_matched_record_to_db(record):
             bibcode_classic=record[8],
             notes=record[9],
         )
-        db = DataBaseSession()
         try:
             result = db.query_master_by_doi(doi)
             db.write_matched_record(result, row)
@@ -114,7 +113,6 @@ def db_query_bibstem(record):
                     if len(issnString) == 8:
                         issnString = issnString[0:4] + "-" + issnString[4:]
                     try:
-                        db = DataBaseSession()
                         bibstem_result = (
                             db.query_bibstem_by_issn(issnString)
                         )
@@ -198,7 +196,6 @@ def task_process_meta(infile_batch):
                         bibstem = db_query_bibstem(ingestRecord)
                         bibcode = bibgen.make_bibcode(ingestRecord, bibstem=bibstem)
                         doi = processedRecord.get("master_doi", "")
-                        db = DataBaseSession()
                         (bibcodesFromDoi, bibcodesFromBib) = db.query_classic_bibcodes(
                             doi, bibcode
                         )
@@ -279,7 +276,6 @@ def task_process_meta(infile_batch):
 def task_completeness_per_bibstem(bibstem):
     try:
         bibstem = bibstem.ljust(5, ".")
-        db = DataBaseSession()
         result = (
             db.query_completeness_per_bibstem(bibstem)
         )
@@ -317,7 +313,6 @@ def task_completeness_per_bibstem(bibstem):
                 )
             else:
                 try:
-                    db = DataBaseSession()
                     db.write_completeness_summary(outrec)
                 except Exception as err:
                     logger.warning(
@@ -327,7 +322,6 @@ def task_completeness_per_bibstem(bibstem):
 
 
 def task_do_all_completeness():
-    db = DataBaseSession()
     try:
         bibstems = db.query_summary_bibstems()
         if bibstems:
@@ -341,7 +335,6 @@ def task_do_all_completeness():
 
 def task_export_completeness_to_json():
     try:
-        db = DataBaseSession()
         allData = []
         bibstems = db.query_summary_bibstems()
         for bib in bibstems:
@@ -378,17 +371,16 @@ def task_export_completeness_to_json():
 def task_retry_records(rec_type):
     batch_count = app.conf.get("RECORDS_PER_BATCH", 100)
     try:
-        with DataBaseSession() as db:
-            result = db.query_retry_files(rec_type)
-            batch = []
-            for r in result:
-                batch.append(r[0])
-                if len(batch) == batch_count:
-                    logger.debug("Calling task_process_meta with batch '%s'" % batch)
-                    task_process_meta.delay(batch)
-                    batch = []
-            if len(batch):
+        result = db.query_retry_files(rec_type)
+        batch = []
+        for r in result:
+            batch.append(r[0])
+            if len(batch) == batch_count:
                 logger.debug("Calling task_process_meta with batch '%s'" % batch)
                 task_process_meta.delay(batch)
+                batch = []
+        if len(batch):
+            logger.debug("Calling task_process_meta with batch '%s'" % batch)
+            task_process_meta.delay(batch)
     except Exception as err:
         logger.warning('Error reprocessing records of matchtype "%s": %s' % (rec_type, err))
