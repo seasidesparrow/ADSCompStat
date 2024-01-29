@@ -64,8 +64,8 @@ def task_write_matched_record_to_db(record):
             notes=record[9],
         )
         try:
-            result = db.query_master_by_doi(doi)
-            db.write_matched_record(result, row)
+            result = db.query_master_by_doi(app, doi)
+            db.write_matched_record(app, result, row)
         except Exception as err:
             logger.error("write_matched_record failed: %s" % err)
     else:
@@ -114,7 +114,7 @@ def db_query_bibstem(record):
                         issnString = issnString[0:4] + "-" + issnString[4:]
                     try:
                         bibstem_result = (
-                            db.query_bibstem_by_issn(issnString)
+                            db.query_bibstem_by_issn(app, issnString)
                         )
                         if bibstem_result:
                             bibstem = bibstem_result[0]
@@ -197,7 +197,7 @@ def task_process_meta(infile_batch):
                         bibcode = bibgen.make_bibcode(ingestRecord, bibstem=bibstem)
                         doi = processedRecord.get("master_doi", "")
                         (bibcodesFromDoi, bibcodesFromBib) = db.query_classic_bibcodes(
-                            doi, bibcode
+                            app, doi, bibcode
                         )
                         xmatch = CrossrefMatcher(related_bibstems=related_bibstems)
                         xmatchResult = xmatch.match(bibcode, bibcodesFromDoi, bibcodesFromBib)
@@ -277,7 +277,7 @@ def task_completeness_per_bibstem(bibstem):
     try:
         bibstem = bibstem.ljust(5, ".")
         result = (
-            db.query_completeness_per_bibstem(bibstem)
+            db.query_completeness_per_bibstem(app, bibstem)
         )
     except Exception as err:
         logger.warning("Failed to get completeness summary for bibstem %s: %s" % (bibstem, err))
@@ -313,7 +313,7 @@ def task_completeness_per_bibstem(bibstem):
                 )
             else:
                 try:
-                    db.write_completeness_summary(outrec)
+                    db.write_completeness_summary(app, outrec)
                 except Exception as err:
                     logger.warning(
                         "Error writing completeness data to db: %s" % err
@@ -323,9 +323,9 @@ def task_completeness_per_bibstem(bibstem):
 
 def task_do_all_completeness():
     try:
-        bibstems = db.query_summary_bibstems()
+        bibstems = db.query_summary_bibstems(app)
         if bibstems:
-            db.clear_summary_data()
+            db.clear_summary_data(app)
         # bibstems = [x[0] for x in bibstems]
         for bibstem in bibstems:
             task_completeness_per_bibstem.delay(bibstem)
@@ -336,10 +336,10 @@ def task_do_all_completeness():
 def task_export_completeness_to_json():
     try:
         allData = []
-        bibstems = db.query_summary_bibstems()
+        bibstems = db.query_summary_bibstems(app)
         for bib in bibstems:
             completeness = []
-            result = db.query_summary_single_bibstem(bib)
+            result = db.query_summary_single_bibstem(app, bib)
             paperCount = 0
             averageCompleteness = 0.0
             for r in result:
@@ -371,7 +371,7 @@ def task_export_completeness_to_json():
 def task_retry_records(rec_type):
     batch_count = app.conf.get("RECORDS_PER_BATCH", 100)
     try:
-        result = db.query_retry_files(rec_type)
+        result = db.query_retry_files(app, rec_type)
         batch = []
         for r in result:
             batch.append(r[0])
