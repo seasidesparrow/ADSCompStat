@@ -153,11 +153,11 @@ def query_summary_single_bibstem(app, bibstem):
         except Exception as err:
             raise DBQueryException("Failed to get completeness for bibstem %s: %s" % (bibstem, err))
 
-def update_master_by_doi(app, row_modeldict):
+def update_master_by_doi(app, update):
     with app.session_scope() as session:
         try:
-            doi = row_modeldict.toJSON().get("master_doi", None)
-            session.query(master).filter_by(master_doi=doi).update(row_modeldict)
+            doi = update.get("master_doi", None)
+            session.query(master).filter_by(master_doi=doi).update(update)
             session.commit()
         except Exception as err:
             session.rollback()
