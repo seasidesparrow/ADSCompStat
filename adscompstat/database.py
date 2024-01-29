@@ -188,7 +188,7 @@ def write_matched_record(app, result, record):
     with app.session_scope() as session:
         try:
             if result:
-                update_master_by_doi(record)
+                update_master_by_doi(app, record)
             else:
                 session.add(record)
                 session.commit()
