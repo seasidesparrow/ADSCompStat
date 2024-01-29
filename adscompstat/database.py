@@ -188,9 +188,35 @@ def write_matched_record(app, result, record):
     with app.session_scope() as session:
         try:
             if result:
-                update_master_by_doi(app, record)
+                row = master(
+                    harvest_filepath=record[0],
+                    master_doi=record[1],
+                    issns=record[2],
+                    db_origin="Crossref",
+                    master_bibdata=record[3],
+                    classic_match=record[4],
+                    status=record[5],
+                    matchtype=record[6],
+                    bibcode_meta=record[7],
+                    bibcode_classic=record[8],
+                    notes=record[9],
+                )
+                update_master_by_doi(app, row)
             else:
-                session.add(record)
+                update = {
+                    "harvest_filepath": record[0],
+                    "master_doi": record[1],
+                    "issns": record[2],
+                    "db_origin": "Crossref",
+                    "master_bibdata": record[3],
+                    "classic_match": record[4],
+                    "status": record[5],
+                    "matchtype": record[6],
+                    "bibcode_meta": record[7],
+                    "bibcode_classic": record[8],
+                    "notes": record[9],
+                }
+                session.add(update)
                 session.commit()
         except Exception as err:
             session.rollback()

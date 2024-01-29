@@ -63,22 +63,9 @@ def task_write_block(table, datablock):
 def task_write_matched_record_to_db(record):
     if record:
         doi = record[1]
-        row = master(
-            harvest_filepath=record[0],
-            master_doi=record[1],
-            issns=record[2],
-            db_origin="Crossref",
-            master_bibdata=record[3],
-            classic_match=record[4],
-            status=record[5],
-            matchtype=record[6],
-            bibcode_meta=record[7],
-            bibcode_classic=record[8],
-            notes=record[9],
-        )
         try:
             result = db.query_master_by_doi(app, doi)
-            db.write_matched_record(app, result, row)
+            db.write_matched_record(app, result, record)
         except Exception as err:
             logger.error("write_matched_record failed: %s" % err)
     else:
