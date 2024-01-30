@@ -323,10 +323,12 @@ def task_completeness_per_bibstem(bibstem):
 
 def task_do_all_completeness():
     try:
-        bibstems = db.query_summary_bibstems(app)
+        bibstems = db.query_master_bibstems(app)
         if bibstems:
             db.clear_summary_data(app)
-        # bibstems = [x[0] for x in bibstems]
+        else:
+            logger.warning("Failed to retrieve unique bibstems from master!")
+        bibstems = [x[0] for x in bibstems]
         for bibstem in bibstems:
             task_completeness_per_bibstem.delay(bibstem)
     except Exception as err:
