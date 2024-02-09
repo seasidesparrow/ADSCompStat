@@ -52,6 +52,7 @@ def task_clear_classic_data():
     except Exception as err:
         logger.warning("Unable to clear classic data: %s" % err)
 
+
 def task_write_block(table, datablock):
     try:
         db.write_block(app, table, datablock)
@@ -100,30 +101,6 @@ def task_process_logfile(infile):
             task_process_meta.delay(batch)
     except Exception as err:
         logger.warning("Error processing logfile %s: %s" % (infile, err))
-
-
-def db_query_bibstem(record):
-    try:
-        issn_list = record.get("publication", {}).get("ISSN", [])
-        bibstem = ""
-        for issn in issn_list:
-            if not bibstem:
-                issnString = str(issn.get("issnString", ""))
-                if issnString:
-                    if len(issnString) == 8:
-                        issnString = issnString[0:4] + "-" + issnString[4:]
-                    try:
-                        bibstem_result = (
-                            db.query_bibstem_by_issn(app, issnString)
-                        )
-                        if bibstem_result:
-                            bibstem = bibstem_result[0]
-                    except Exception as err:
-                        logger.warning("Error from database call: %s" % err)
-    except Exception as err:
-        raise BibstemLookupException(err)
-    else:
-        return bibstem
 
 
 @app.task(queue="process-meta")
@@ -193,7 +170,7 @@ def task_process_meta(infile_batch):
                 else:
                     try:
                         ingestRecord = processedRecord.get("record", "")
-                        bibstem = db_query_bibstem(ingestRecord)
+                        bibstem = db.db_query_bibstem(ingestRecord)
                         bibcode = bibgen.make_bibcode(ingestRecord, bibstem=bibstem)
                         doi = processedRecord.get("master_doi", "")
                         (bibcodesFromDoi, bibcodesFromBib) = db.query_classic_bibcodes(
@@ -318,7 +295,6 @@ def task_completeness_per_bibstem(bibstem):
                     logger.warning(
                         "Error writing completeness data to db: %s" % err
                     )
-
 
 
 def task_do_all_completeness():

@@ -25,7 +25,7 @@ dependencies = [
     'SQLAlchemy-Utils==0.38.2',
     'alembic==1.0.0',
     'adsingestp @ git+https://github.com/adsabs/ADSIngestParser.git@v0.9.11',
-    'adsenrich @ git+https://github.com/seasidesparrow/ADSIngestEnrichment.git@iop_supplements.20240124',
+    'adsenrich @ git+https://github.com/adsabs/ADSIngestEnrichment.git@v0.9.4',
 ]
 
 

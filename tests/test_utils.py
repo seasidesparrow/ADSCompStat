@@ -1,7 +1,7 @@
 import os
 import unittest
 
-from adscompstat import utils
+from adscompstat import utils, exceptions
 
 
 class TestUtils(unittest.TestCase):
@@ -12,18 +12,16 @@ class TestUtils(unittest.TestCase):
         self.maxDiff = None
 
     def test_get_updateagent_logs(self):
-        # test one, UpdateAgent log directory doesn"t exist
         logdir = "/nonexistent_path/"
-        self.assertRaises(Exception, utils.get_updateagent_logs(logdir))
+        self.assertRaises(Exception,
+                          utils.get_updateagent_logs(logdir))
 
-        # test two, UpdateAgent log directory exists and has file(s)
         logdir = "tests/stubdata/input/UpdateAgent/"
         test_infiles = utils.get_updateagent_logs(logdir)
         correct_infiles = ["tests/stubdata/input/UpdateAgent/10.3847:4879.out.2023-08-25"]
         self.assertEqual(test_infiles, correct_infiles)
 
     def test_parse_pub_and_date_from_logs(self):
-        # test three, parse logfiles
         test_infiles = ["tests/stubdata/input/UpdateAgent/10.3847:4879.out.2023-08-25"]
         (test_dates, test_pubdois) = utils.parse_pub_and_date_from_logs(test_infiles)
         correct_dates = ["2023-08-25"]
@@ -31,8 +29,11 @@ class TestUtils(unittest.TestCase):
         self.assertEqual(test_dates, correct_dates)
         self.assertEqual(test_pubdois, correct_pubdois)
 
+        test_infiles_fail = ["/nonexistent/path"]
+        with self.assertRaises(Exception): 
+            utils.parse_pub_and_date_from_logs(test_infiles_fail)
+
     def test_read_updateagent_log(self):
-        # test four, read an updateagent_log
         test_logfile = "tests/stubdata/input/UpdateAgent/10.3847:4879.out.2023-08-25"
         test_xmlfiles = utils.read_updateagent_log(test_logfile)
         correct_xmlfiles = [
@@ -55,6 +56,11 @@ class TestUtils(unittest.TestCase):
         ]
 
         self.assertEqual(test_xmlfiles, correct_xmlfiles)
+
+        test_logfile_fail = "/nonexistent/path"
+        with self.assertRaises(Exception):
+            utils.read_updateagent_log(test_logfile_fail)
+
 
     def test_process_one_meta_xml(self):
         # test six, process a crossref xml file

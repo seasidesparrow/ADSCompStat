@@ -3,7 +3,6 @@ import os
 
 from sqlalchemy import func
 
-from adscompstat import app as app_module
 from adscompstat.models import CompStatAltIdents as alt_identifiers
 from adscompstat.models import CompStatIdentDoi as identifier_doi
 from adscompstat.models import CompStatIssnBibstem as issn_bibstem
@@ -123,6 +122,30 @@ def query_retry_files(app, rec_type):
             return session.query(master.harvest_filepath).filter(master.matchtype == rec_type).all()
         except Exception as err:
             raise DBQueryException("Unable to retrieve retry files of type %s: %s" % (rec_type, err))
+
+def query_bibstem(record):
+    try:                    
+        issn_list = record.get("publication", {}).get("ISSN", [])
+        bibstem = ""
+        print("LOL BUTTS", issn_list)
+        for issn in issn_list:
+            if not bibstem:
+                issnString = str(issn.get("issnString", ""))
+                if issnString:
+                    if len(issnString) == 8:
+                        issnString = issnString[0:4] + "-" + issnString[4:]
+                    try:
+                        bibstem_result = (
+                            query_bibstem_by_issn(app, issnString)
+                        )
+                        if bibstem_result:
+                            bibstem = bibstem_result[0]
+                    except Exception as err:
+                        logger.warning("Error from database call: %s" % err)
+    except Exception as err:
+        raise BibstemLookupException(err)
+    else:
+        return bibstem
 
 def query_master_bibstems(app):
     with app.session_scope() as session:
