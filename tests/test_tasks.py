@@ -1,4 +1,3 @@
-import json
 import os
 import unittest
 
@@ -6,8 +5,8 @@ from mock import patch
 
 from adscompstat import app
 from adscompstat import database as db
-from adscompstat import tasks, utils
-from adscompstat.models import Base, CompStatMaster as master
+from adscompstat import tasks
+from adscompstat.models import Base
 
 
 class TestTasks(unittest.TestCase):
@@ -53,48 +52,175 @@ class TestTasks(unittest.TestCase):
     def test_task_process_meta(self):
         # test1: empty xml document
         infile = os.path.join(self.inputdir, "test_null.xml")
-        expected_call = (infile, "", "{}", "{}", "{}", "Failed", "failed", "", "", "error: 'NoneType' object has no attribute 'extract'")
-        with patch.object(db, "query_master_by_doi", return_value=[]) as db.query_master_by_doi, patch.object(db, "write_matched_record") as db.write_matched_record, patch.object(tasks.task_write_matched_record_to_db, "delay") as next_task:
+        expected_call = (
+            infile,
+            "",
+            "{}",
+            "{}",
+            "{}",
+            "Failed",
+            "failed",
+            "",
+            "",
+            "error: 'NoneType' object has no attribute 'extract'",
+        )
+        with patch.object(
+            db, "query_master_by_doi", return_value=[]
+        ) as db.query_master_by_doi, patch.object(
+            db, "write_matched_record"
+        ) as db.write_matched_record, patch.object(
+            tasks.task_write_matched_record_to_db, "delay"
+        ) as next_task:
             tasks.task_process_meta([infile])
             next_task.assert_called_with(expected_call)
 
         # test2: valid xml document, but you can't supply a bibstem to bibcode generator, nothing returned from doi query
         infile = os.path.join(self.inputdir, "test_metadata.xml")
-        expected_call=(infile, "10.3847/0004-637X/816/1/36", '{"electronic": "1538-4357"}', '{"publication": {"pubName": "The Astrophysical Journal", "issueNum": "1", "volumeNum": "816", "pubYear": "2016", "ISSN": [{"pubtype": "electronic", "issnString": "1538-4357"}]}, "pagination": {"firstPage": "36"}, "persistentIDs": [{"DOI": "10.3847/0004-637X/816/1/36"}], "first_author": {"name": {"surname": "Xiong", "given_name": "Gang"}}, "title": {"textEnglish": "OPACITY MEASUREMENT AND THEORETICAL INVESTIGATION OF HOT SILICON PLASMA"}}', "{}", "Failed", "failed", "", "", "You're missing year and or bibstem -- no bibcode can be made!")
-        with patch.object(db, "query_bibstem", return_value=None) as db.query_bibstem, patch.object(db, "query_master_by_doi", return_value=[]) as db.query_master_by_doi, patch.object(db, "write_matched_record") as db.write_matched_record, patch.object(tasks.task_write_matched_record_to_db, "delay") as next_task:
+        expected_call = (
+            infile,
+            "10.3847/0004-637X/816/1/36",
+            '{"electronic": "1538-4357"}',
+            '{"publication": {"pubName": "The Astrophysical Journal", "issueNum": "1", "volumeNum": "816", "pubYear": "2016", "ISSN": [{"pubtype": "electronic", "issnString": "1538-4357"}]}, "pagination": {"firstPage": "36"}, "persistentIDs": [{"DOI": "10.3847/0004-637X/816/1/36"}], "first_author": {"name": {"surname": "Xiong", "given_name": "Gang"}}, "title": {"textEnglish": "OPACITY MEASUREMENT AND THEORETICAL INVESTIGATION OF HOT SILICON PLASMA"}}',
+            "{}",
+            "Failed",
+            "failed",
+            "",
+            "",
+            "You're missing year and or bibstem -- no bibcode can be made!",
+        )
+        with patch.object(
+            db, "query_bibstem", return_value=None
+        ) as db.query_bibstem, patch.object(
+            db, "query_master_by_doi", return_value=[]
+        ) as db.query_master_by_doi, patch.object(
+            db, "write_matched_record"
+        ) as db.write_matched_record, patch.object(
+            tasks.task_write_matched_record_to_db, "delay"
+        ) as next_task:
             tasks.task_process_meta([infile])
             next_task.assert_called_with(expected_call)
 
         # test3: valid xml document, successfully made a bibcode, nothing returned from doi query
         infile = os.path.join(self.inputdir, "test_metadata.xml")
-        expected_call=(infile, "10.3847/0004-637X/816/1/36", '{"electronic": "1538-4357"}', '{"publication": {"pubName": "The Astrophysical Journal", "issueNum": "1", "volumeNum": "816", "pubYear": "2016", "ISSN": [{"pubtype": "electronic", "issnString": "1538-4357"}]}, "pagination": {"firstPage": "36"}, "persistentIDs": [{"DOI": "10.3847/0004-637X/816/1/36"}], "first_author": {"name": {"surname": "Xiong", "given_name": "Gang"}}, "title": {"textEnglish": "OPACITY MEASUREMENT AND THEORETICAL INVESTIGATION OF HOT SILICON PLASMA"}}', '{"DOI": "DOI not in classic"}', "Unmatched", "unmatched", "2016ApJ...816...36X", None, "")
-        with patch.object(db, "query_bibstem", return_value='ApJ') as db.query_bibstem, patch.object(db, "query_master_by_doi", return_value=[]) as db.query_master_by_doi, patch.object(db, "write_matched_record") as db.write_matched_record, patch.object(tasks.task_write_matched_record_to_db, "delay") as next_task:
+        expected_call = (
+            infile,
+            "10.3847/0004-637X/816/1/36",
+            '{"electronic": "1538-4357"}',
+            '{"publication": {"pubName": "The Astrophysical Journal", "issueNum": "1", "volumeNum": "816", "pubYear": "2016", "ISSN": [{"pubtype": "electronic", "issnString": "1538-4357"}]}, "pagination": {"firstPage": "36"}, "persistentIDs": [{"DOI": "10.3847/0004-637X/816/1/36"}], "first_author": {"name": {"surname": "Xiong", "given_name": "Gang"}}, "title": {"textEnglish": "OPACITY MEASUREMENT AND THEORETICAL INVESTIGATION OF HOT SILICON PLASMA"}}',
+            '{"DOI": "DOI not in classic"}',
+            "Unmatched",
+            "unmatched",
+            "2016ApJ...816...36X",
+            None,
+            "",
+        )
+        with patch.object(
+            db, "query_bibstem", return_value="ApJ"
+        ) as db.query_bibstem, patch.object(
+            db, "query_master_by_doi", return_value=[]
+        ) as db.query_master_by_doi, patch.object(
+            db, "write_matched_record"
+        ) as db.write_matched_record, patch.object(
+            tasks.task_write_matched_record_to_db, "delay"
+        ) as next_task:
             tasks.task_process_meta([infile])
             next_task.assert_called_with(expected_call)
 
         # test4: valid xml document, successfully made a bibcode, bibcode is in classic but doi is not
         infile = os.path.join(self.inputdir, "test_metadata.xml")
-        expected_call=(infile, "10.3847/0004-637X/816/1/36", '{"electronic": "1538-4357"}', '{"publication": {"pubName": "The Astrophysical Journal", "issueNum": "1", "volumeNum": "816", "pubYear": "2016", "ISSN": [{"pubtype": "electronic", "issnString": "1538-4357"}]}, "pagination": {"firstPage": "36"}, "persistentIDs": [{"DOI": "10.3847/0004-637X/816/1/36"}], "first_author": {"name": {"surname": "Xiong", "given_name": "Gang"}}, "title": {"textEnglish": "OPACITY MEASUREMENT AND THEORETICAL INVESTIGATION OF HOT SILICON PLASMA"}}', '{"DOI": "DOI not in classic"}', "Matched", "canonical", "2016ApJ...816...36X", "2016ApJ...816...36X", "")
-        with patch.object(db, "query_bibstem", return_value='ApJ') as db.query_bibstem, patch.object(db, "query_master_by_doi", return_value="") as db.query_master_by_doi, patch.object(db, "query_classic_bibcodes", return_value=([],[("2016ApJ...816...36X", "2016ApJ...816...36X", "canonical")])) as db.query_classic_bibcodes, patch.object(db, "write_matched_record") as db.write_matched_record, patch.object(tasks.task_write_matched_record_to_db, "delay") as next_task:
+        expected_call = (
+            infile,
+            "10.3847/0004-637X/816/1/36",
+            '{"electronic": "1538-4357"}',
+            '{"publication": {"pubName": "The Astrophysical Journal", "issueNum": "1", "volumeNum": "816", "pubYear": "2016", "ISSN": [{"pubtype": "electronic", "issnString": "1538-4357"}]}, "pagination": {"firstPage": "36"}, "persistentIDs": [{"DOI": "10.3847/0004-637X/816/1/36"}], "first_author": {"name": {"surname": "Xiong", "given_name": "Gang"}}, "title": {"textEnglish": "OPACITY MEASUREMENT AND THEORETICAL INVESTIGATION OF HOT SILICON PLASMA"}}',
+            '{"DOI": "DOI not in classic"}',
+            "Matched",
+            "canonical",
+            "2016ApJ...816...36X",
+            "2016ApJ...816...36X",
+            "",
+        )
+        with patch.object(
+            db, "query_bibstem", return_value="ApJ"
+        ) as db.query_bibstem, patch.object(
+            db, "query_master_by_doi", return_value=""
+        ) as db.query_master_by_doi, patch.object(
+            db,
+            "query_classic_bibcodes",
+            return_value=([], [("2016ApJ...816...36X", "2016ApJ...816...36X", "canonical")]),
+        ) as db.query_classic_bibcodes, patch.object(
+            db, "write_matched_record"
+        ) as db.write_matched_record, patch.object(
+            tasks.task_write_matched_record_to_db, "delay"
+        ) as next_task:
             tasks.task_process_meta([infile])
             next_task.assert_called_with(expected_call)
 
         # test5: valid xml document, successfully made a bibcode, matching bibcode from doi query
         infile = os.path.join(self.inputdir, "test_metadata.xml")
-        expected_call=(infile, "10.3847/0004-637X/816/1/36", '{"electronic": "1538-4357"}', '{"publication": {"pubName": "The Astrophysical Journal", "issueNum": "1", "volumeNum": "816", "pubYear": "2016", "ISSN": [{"pubtype": "electronic", "issnString": "1538-4357"}]}, "pagination": {"firstPage": "36"}, "persistentIDs": [{"DOI": "10.3847/0004-637X/816/1/36"}], "first_author": {"name": {"surname": "Xiong", "given_name": "Gang"}}, "title": {"textEnglish": "OPACITY MEASUREMENT AND THEORETICAL INVESTIGATION OF HOT SILICON PLASMA"}}', "{}", "Matched", "canonical", "2016ApJ...816...36X", "2016ApJ...816...36X", "")
-        with patch.object(db, "query_bibstem", return_value='ApJ') as db.query_bibstem, patch.object(db, "query_master_by_doi", return_value="2016ApJ...816...36X") as db.query_master_by_doi, patch.object(db, "query_classic_bibcodes", return_value=([("2016ApJ...816...36X", "2016ApJ...816...36X", "canonical")],[("2016ApJ...816...36X", "2016ApJ...816...36X", "canonical")])) as db.query_classic_bibcodes, patch.object(db, "write_matched_record") as db.write_matched_record, patch.object(tasks.task_write_matched_record_to_db, "delay") as next_task:
+        expected_call = (
+            infile,
+            "10.3847/0004-637X/816/1/36",
+            '{"electronic": "1538-4357"}',
+            '{"publication": {"pubName": "The Astrophysical Journal", "issueNum": "1", "volumeNum": "816", "pubYear": "2016", "ISSN": [{"pubtype": "electronic", "issnString": "1538-4357"}]}, "pagination": {"firstPage": "36"}, "persistentIDs": [{"DOI": "10.3847/0004-637X/816/1/36"}], "first_author": {"name": {"surname": "Xiong", "given_name": "Gang"}}, "title": {"textEnglish": "OPACITY MEASUREMENT AND THEORETICAL INVESTIGATION OF HOT SILICON PLASMA"}}',
+            "{}",
+            "Matched",
+            "canonical",
+            "2016ApJ...816...36X",
+            "2016ApJ...816...36X",
+            "",
+        )
+        with patch.object(
+            db, "query_bibstem", return_value="ApJ"
+        ) as db.query_bibstem, patch.object(
+            db, "query_master_by_doi", return_value="2016ApJ...816...36X"
+        ) as db.query_master_by_doi, patch.object(
+            db,
+            "query_classic_bibcodes",
+            return_value=(
+                [("2016ApJ...816...36X", "2016ApJ...816...36X", "canonical")],
+                [("2016ApJ...816...36X", "2016ApJ...816...36X", "canonical")],
+            ),
+        ) as db.query_classic_bibcodes, patch.object(
+            db, "write_matched_record"
+        ) as db.write_matched_record, patch.object(
+            tasks.task_write_matched_record_to_db, "delay"
+        ) as next_task:
             tasks.task_process_meta([infile])
             next_task.assert_called_with(expected_call)
-
 
         # test6: valid xml document, successfully made a bibcode, doi is wrong in classic
         infile = os.path.join(self.inputdir, "test_metadata.xml")
-        expected_call=(infile, "10.3847/0004-637X/816/1/36", '{"electronic": "1538-4357"}', '{"publication": {"pubName": "The Astrophysical Journal", "issueNum": "1", "volumeNum": "816", "pubYear": "2016", "ISSN": [{"pubtype": "electronic", "issnString": "1538-4357"}]}, "pagination": {"firstPage": "36"}, "persistentIDs": [{"DOI": "10.3847/0004-637X/816/1/36"}], "first_author": {"name": {"surname": "Xiong", "given_name": "Gang"}}, "title": {"textEnglish": "OPACITY MEASUREMENT AND THEORETICAL INVESTIGATION OF HOT SILICON PLASMA"}}', '{"DOI": "DOI mismatched", "bibcode": "2016ApJ...816...36X"}', "Matched", "mismatch", "2016ApJ...816...36X", "2016FAKEY.123..456Z", "")
-        with patch.object(db, "query_bibstem", return_value='ApJ') as db.query_bibstem, patch.object(db, "query_master_by_doi", return_value="2016FAKEY.123..456Z") as db.query_master_by_doi, patch.object(db, "query_classic_bibcodes", return_value=([("2016FAKEY.123..456Z", "2016FAKEY.123..456Z", "canonical")],[("2016ApJ...816...36X", "2016ApJ...816...36X", "canonical")])) as db.query_classic_bibcodes, patch.object(db, "write_matched_record") as db.write_matched_record, patch.object(tasks.task_write_matched_record_to_db, "delay") as next_task:
+        expected_call = (
+            infile,
+            "10.3847/0004-637X/816/1/36",
+            '{"electronic": "1538-4357"}',
+            '{"publication": {"pubName": "The Astrophysical Journal", "issueNum": "1", "volumeNum": "816", "pubYear": "2016", "ISSN": [{"pubtype": "electronic", "issnString": "1538-4357"}]}, "pagination": {"firstPage": "36"}, "persistentIDs": [{"DOI": "10.3847/0004-637X/816/1/36"}], "first_author": {"name": {"surname": "Xiong", "given_name": "Gang"}}, "title": {"textEnglish": "OPACITY MEASUREMENT AND THEORETICAL INVESTIGATION OF HOT SILICON PLASMA"}}',
+            '{"DOI": "DOI mismatched", "bibcode": "2016ApJ...816...36X"}',
+            "Matched",
+            "mismatch",
+            "2016ApJ...816...36X",
+            "2016FAKEY.123..456Z",
+            "",
+        )
+        with patch.object(
+            db, "query_bibstem", return_value="ApJ"
+        ) as db.query_bibstem, patch.object(
+            db, "query_master_by_doi", return_value="2016FAKEY.123..456Z"
+        ) as db.query_master_by_doi, patch.object(
+            db,
+            "query_classic_bibcodes",
+            return_value=(
+                [("2016FAKEY.123..456Z", "2016FAKEY.123..456Z", "canonical")],
+                [("2016ApJ...816...36X", "2016ApJ...816...36X", "canonical")],
+            ),
+        ) as db.query_classic_bibcodes, patch.object(
+            db, "write_matched_record"
+        ) as db.write_matched_record, patch.object(
+            tasks.task_write_matched_record_to_db, "delay"
+        ) as next_task:
             tasks.task_process_meta([infile])
             next_task.assert_called_with(expected_call)
-
-
 
     def test_task_retry_records(self):
         record_meta_file = os.path.join(self.inputdir, "test_metadata.xml")
