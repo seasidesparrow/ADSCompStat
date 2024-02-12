@@ -1,7 +1,7 @@
 import os
 import unittest
 
-from adscompstat import utils, exceptions
+from adscompstat import utils
 
 
 class TestUtils(unittest.TestCase):
@@ -13,8 +13,7 @@ class TestUtils(unittest.TestCase):
 
     def test_get_updateagent_logs(self):
         logdir = "/nonexistent_path/"
-        self.assertRaises(Exception,
-                          utils.get_updateagent_logs(logdir))
+        self.assertRaises(Exception, utils.get_updateagent_logs(logdir))
 
         logdir = "tests/stubdata/input/UpdateAgent/"
         test_infiles = utils.get_updateagent_logs(logdir)
@@ -30,7 +29,7 @@ class TestUtils(unittest.TestCase):
         self.assertEqual(test_pubdois, correct_pubdois)
 
         test_infiles_fail = ["/nonexistent/path"]
-        with self.assertRaises(Exception): 
+        with self.assertRaises(Exception):
             utils.parse_pub_and_date_from_logs(test_infiles_fail)
 
     def test_read_updateagent_log(self):
@@ -60,7 +59,6 @@ class TestUtils(unittest.TestCase):
         test_logfile_fail = "/nonexistent/path"
         with self.assertRaises(Exception):
             utils.read_updateagent_log(test_logfile_fail)
-
 
     def test_process_one_meta_xml(self):
         # test six, process a crossref xml file

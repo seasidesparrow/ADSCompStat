@@ -4,7 +4,6 @@ import os
 from adsputils import load_config, setup_logging
 
 from adscompstat import tasks, utils
-from adscompstat import database as db
 from adscompstat.exceptions import (
     DBClearException,
     DBWriteException,

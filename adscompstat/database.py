@@ -1,6 +1,6 @@
-import json
 import os
 
+from adsputils import load_config, setup_logging
 from sqlalchemy import func
 
 from adscompstat.models import CompStatAltIdents as alt_identifiers
@@ -8,13 +8,16 @@ from adscompstat.models import CompStatIdentDoi as identifier_doi
 from adscompstat.models import CompStatIssnBibstem as issn_bibstem
 from adscompstat.models import CompStatMaster as master
 from adscompstat.models import CompStatSummary as summary
-from adsputils import load_config, setup_logging
 
 proj_home = os.path.realpath(os.path.join(os.path.dirname(__file__), "../"))
 config = load_config(proj_home=proj_home)
-logger = setup_logging(__name__, proj_home=proj_home,
-                        level=config.get('LOGGING_LEVEL', 'INFO'),
-                        attach_stdout=config.get('LOG_STDOUT', False))
+logger = setup_logging(
+    __name__,
+    proj_home=proj_home,
+    level=config.get("LOGGING_LEVEL", "INFO"),
+    attach_stdout=config.get("LOG_STDOUT", False),
+)
+
 
 class DBClearClassicException(Exception):
     pass
@@ -32,6 +35,10 @@ class DBQueryException(Exception):
     pass
 
 
+class BibstemLookupException(Exception):
+    pass
+
+
 def clear_classic_data(app):
     with app.session_scope() as session:
         try:
@@ -44,6 +51,7 @@ def clear_classic_data(app):
             session.flush()
             raise DBClearClassicException("Existing classic data tables not cleared: %s" % err)
 
+
 def clear_summary_data(app):
     with app.session_scope() as session:
         try:
@@ -54,6 +62,7 @@ def clear_summary_data(app):
             session.flush()
             raise DBClearSummaryException("Failed to clear summary table: %s" % err)
 
+
 def query_master_by_doi(app, doi):
     with app.session_scope() as session:
         try:
@@ -61,12 +70,14 @@ def query_master_by_doi(app, doi):
         except Exception as err:
             raise DBQueryException("Unable to query master by DOI %s: %s" % (doi, err))
 
+
 def query_bibstem_by_issn(app, issn):
     with app.session_scope() as session:
         try:
             return session.query(issn_bibstem.bibstem).filter(issn_bibstem.issn == issn).first()
         except Exception as err:
             raise DBQueryException("Unable to get bibstem from issn %s: %s" % (issn, err))
+
 
 def query_completeness_per_bibstem(app, bibstem):
     with app.session_scope() as session:
@@ -84,7 +95,10 @@ def query_completeness_per_bibstem(app, bibstem):
             )
             return result
         except Exception as err:
-            raise DBQueryException("Error querying completeness for bibstem %s: %s" % (bibstem, err))
+            raise DBQueryException(
+                "Error querying completeness for bibstem %s: %s" % (bibstem, err)
+            )
+
 
 def query_classic_bibcodes(app, doi, bibcode):
     with app.session_scope() as session:
@@ -98,7 +112,9 @@ def query_classic_bibcodes(app, doi, bibcode):
                         alt_identifiers.canonical_id,
                         alt_identifiers.idtype,
                     )
-                    .join(identifier_doi, alt_identifiers.canonical_id == identifier_doi.identifier)
+                    .join(
+                        identifier_doi, alt_identifiers.canonical_id == identifier_doi.identifier
+                    )
                     .filter(identifier_doi.doi == doi)
                     .all()
                 )
@@ -116,15 +132,21 @@ def query_classic_bibcodes(app, doi, bibcode):
         except Exception as err:
             raise DBQueryException(err)
 
+
 def query_retry_files(app, rec_type):
     with app.session_scope() as session:
         try:
-            return session.query(master.harvest_filepath).filter(master.matchtype == rec_type).all()
+            return (
+                session.query(master.harvest_filepath).filter(master.matchtype == rec_type).all()
+            )
         except Exception as err:
-            raise DBQueryException("Unable to retrieve retry files of type %s: %s" % (rec_type, err))
+            raise DBQueryException(
+                "Unable to retrieve retry files of type %s: %s" % (rec_type, err)
+            )
 
-def query_bibstem(record):
-    try:                    
+
+def query_bibstem(app, record):
+    try:
         issn_list = record.get("publication", {}).get("ISSN", [])
         bibstem = ""
         print("LOL BUTTS", issn_list)
@@ -135,9 +157,7 @@ def query_bibstem(record):
                     if len(issnString) == 8:
                         issnString = issnString[0:4] + "-" + issnString[4:]
                     try:
-                        bibstem_result = (
-                            query_bibstem_by_issn(app, issnString)
-                        )
+                        bibstem_result = query_bibstem_by_issn(app, issnString)
                         if bibstem_result:
                             bibstem = bibstem_result[0]
                     except Exception as err:
@@ -147,12 +167,14 @@ def query_bibstem(record):
     else:
         return bibstem
 
+
 def query_master_bibstems(app):
     with app.session_scope() as session:
         try:
             return session.query(func.substr(master.bibcode_meta, 5, 5)).distinct().all()
         except Exception as err:
             raise DBQueryException("Failed to get unique bibstems from master: %s" % err)
+
 
 def query_summary_bibstems(app):
     with app.session_scope() as session:
@@ -163,18 +185,26 @@ def query_summary_bibstems(app):
         except Exception as err:
             raise DBQueryException("Failed to get bibstems from summary: %s" % err)
 
+
 def query_summary_single_bibstem(app, bibstem):
     with app.session_scope() as session:
         try:
-            result = session.query(
+            result = (
+                session.query(
                     summary.bibstem,
                     summary.volume,
                     summary.complete_fraction,
                     summary.paper_count,
-                    ).filter(summary.bibstem == bibstem).all()
+                )
+                .filter(summary.bibstem == bibstem)
+                .all()
+            )
             return result
         except Exception as err:
-            raise DBQueryException("Failed to get completeness for bibstem %s: %s" % (bibstem, err))
+            raise DBQueryException(
+                "Failed to get completeness for bibstem %s: %s" % (bibstem, err)
+            )
+
 
 def update_master_by_doi(app, update):
     with app.session_scope() as session:
@@ -185,17 +215,28 @@ def update_master_by_doi(app, update):
         except Exception as err:
             session.rollback()
             session.flush()
-            raise DBWriteException("Error writing record to master: %s; row data: %s" % (err, update))
+            raise DBWriteException(
+                "Error writing record to master: %s; row data: %s" % (err, update)
+            )
 
-def write_completeness_summary(app, summary):
+
+def write_completeness_summary(app, summary_data):
+    summary_rec = summary(
+        bibstem=summary_data[0],
+        volume=summary_data[1],
+        paper_count=summary_data[2],
+        complete_fraction=summary_data[3],
+        complete_details=summary_data[4],
+    )
     with app.session_scope() as session:
         try:
-            session.add(summary)
+            session.add(summary_rec)
             session.commit()
         except Exception as err:
             session.rollback()
             session.flush()
             raise DBWriteException("Error writing summary data: %s" % err)
+
 
 def write_block(app, table, datablock):
     with app.session_scope() as session:
@@ -206,6 +247,7 @@ def write_block(app, table, datablock):
             session.rollback()
             session.flush()
             raise DBWriteException("Failed to bulk write data block: %s" % err)
+
 
 def write_matched_record(app, result, record):
     with app.session_scope() as session:

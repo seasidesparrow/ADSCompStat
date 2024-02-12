@@ -4,18 +4,11 @@ import os
 
 from adsenrich.bibcodes import BibcodeGenerator
 from kombu import Queue
-from sqlalchemy import func
 
 from adscompstat import app as app_module
-from adscompstat import utils
 from adscompstat import database as db
-from adscompstat.exceptions import BibstemLookupException, FetchClassicBibException
+from adscompstat import utils
 from adscompstat.match import CrossrefMatcher
-from adscompstat.models import CompStatAltIdents as alt_identifiers
-from adscompstat.models import CompStatIdentDoi as identifier_doi
-from adscompstat.models import CompStatIssnBibstem as issn_bibstem
-from adscompstat.models import CompStatMaster as master
-from adscompstat.models import CompStatSummary as summary
 
 proj_home = os.path.realpath(os.path.join(os.path.dirname(__file__), "../"))
 app = app_module.ADSCompStatCelery(
@@ -170,7 +163,7 @@ def task_process_meta(infile_batch):
                 else:
                     try:
                         ingestRecord = processedRecord.get("record", "")
-                        bibstem = db.db_query_bibstem(ingestRecord)
+                        bibstem = db.query_bibstem(app, ingestRecord)
                         bibcode = bibgen.make_bibcode(ingestRecord, bibstem=bibstem)
                         doi = processedRecord.get("master_doi", "")
                         (bibcodesFromDoi, bibcodesFromBib) = db.query_classic_bibcodes(
@@ -253,9 +246,7 @@ def task_process_meta(infile_batch):
 def task_completeness_per_bibstem(bibstem):
     try:
         bibstem = bibstem.ljust(5, ".")
-        result = (
-            db.query_completeness_per_bibstem(app, bibstem)
-        )
+        result = db.query_completeness_per_bibstem(app, bibstem)
     except Exception as err:
         logger.warning("Failed to get completeness summary for bibstem %s: %s" % (bibstem, err))
     else:
@@ -276,13 +267,20 @@ def task_completeness_per_bibstem(bibstem):
         for k, v in volumeSummary.items():
             try:
                 (countrecs, compfrac) = utils.get_completeness_fraction(v)
-                outrec = summary(
-                    bibstem=bibstem.rstrip("."),
-                    volume=k,
-                    paper_count=countrecs,
-                    complete_fraction=compfrac,
-                    complete_details=json.dumps(v),
-                )
+                # outrec = summary(
+                #    bibstem=bibstem.rstrip("."),
+                #    volume=k,
+                #    paper_count=countrecs,
+                #    complete_fraction=compfrac,
+                #    complete_details=json.dumps(v),
+                # )
+                outrec = [
+                    bibstem.rstrip("."),
+                    k,
+                    countrecs,
+                    compfrac,
+                    json.dumps(v),
+                ]
             except Exception as err:
                 logger.warning(
                     "Error calculating summary completeness data for %s, v %s: %s"
@@ -292,9 +290,7 @@ def task_completeness_per_bibstem(bibstem):
                 try:
                     db.write_completeness_summary(app, outrec)
                 except Exception as err:
-                    logger.warning(
-                        "Error writing completeness data to db: %s" % err
-                    )
+                    logger.warning("Error writing completeness data to db: %s" % err)
 
 
 def task_do_all_completeness():
@@ -338,9 +334,7 @@ def task_export_completeness_to_json():
                 }
             )
         if allData:
-            utils.export_completeness_data(
-                allData, app.conf.get("COMPLETENESS_EXPORT_FILE", None)
-            )
+            utils.export_completeness_data(allData, app.conf.get("COMPLETENESS_EXPORT_FILE", None))
     except Exception as err:
         logger.error("Unable to export completeness data to disk: %s" % err)
 
