@@ -1,129 +1,76 @@
 import os
 import unittest
+from mock import Mock, patch
 
-from adscompstat.match import CrossrefMatcher
+from adscompstat import app, tasks
+from adscompstat.models import Base, CompStatMaster
 
 
 class TestTasks(unittest.TestCase):
+
     def setUp(self):
+        unittest.TestCase.setUp(self)
+        self.proj_home = os.path.join(os.path.dirname(__file__), "..")
         stubdata_dir = os.path.join(os.path.dirname(__file__), "stubdata/")
         self.inputdir = os.path.join(stubdata_dir, "input")
         self.outputdir = os.path.join(stubdata_dir, "output")
-        self.maxDiff = None
+        self._app = tasks.app
+        self.app = app.ADSCompStatCelery(
+            'test',
+            local_config={
+                'SQLALCHEMY_URL': 'sqlite:///',
+                'SQLALCHEMY_ECHO': False,
+                'RECORDS_PER_BATCH': 100,
+            }
+        )
+        tasks.app = self.app # monkey-patch the app object
 
-    def test__compare_bibstems(self):
-        cm = CrossrefMatcher()
-        cm.related_bibstems = [["Testa", "Testb"]]
+        Base.metadata.bind = self.app._session.get_bind()
+        Base.metadata.create_all()
 
-        # test one, unrelated bibstems
-        bibstem_a = "Foo.."
-        bibstem_b = "Bar.."
-        self.assertFalse(cm._compare_bibstems(bibstem_a, bibstem_b))
+    def tearDown(self):
+        unittest.TestCase.tearDown(self)
+        Base.metadata.drop_all()
+        self.app.close_app()
+        tasks.app = self._app
 
-        # test two, related bibstems
-        bibstem_a = "Testa"
-        bibstem_b = "Testb"
-        self.assertEqual(cm._compare_bibstems(bibstem_a, bibstem_b), "related")
+    def test__process_logfile(self):
+        
+        # input file has 20 records, hence exactly one batch
+        logfile = os.path.join(self.inputdir, "10.1186:300627.out.2023-12-10")
+        with patch.object(tasks.task_process_meta, "delay") as next_task:
+            self.assertEqual(next_task.call_count, 0)
+            tasks.task_process_logfile(logfile)
+            self.assertEqual(next_task.call_count, 1)
 
-        # test three, identical bibstems
-        bibstem_a = "Testc"
-        bibstem_b = "Testc"
-        self.assertEqual(cm._compare_bibstems(bibstem_a, bibstem_b), "matched")
+        # input file has 101 records, hence two batches
+        logfile = os.path.join(self.inputdir, "10.1186:300627.long-fake.2023-12-10")
+        with patch.object(tasks.task_process_meta, "delay") as next_task:
+            self.assertEqual(next_task.call_count, 0)
+            tasks.task_process_logfile(logfile)
+            self.assertEqual(next_task.call_count, 2)
 
-    def test__match_bibcode_permutations(self):
-        cm = CrossrefMatcher()
+    @patch('adscompstat.tasks.app.session_scope')
+    def test__retry_records(self, mock_session):
+    #def test__retry_records(self):
+        fake_files = ["file."+str(t) for t in range(0,205)]
+        # with patch(mock_adscompstat_tasks.app.session_scope.return_value.query.return_value.filter.return_value.all.return_value, return_value=fake_files), patch.object(tasks.task_process_meta, "delay") as next_task:
+        with patch(mock_session.return_value.query.return_value.filter.return_value.all.return_value, return_value=fake_files), patch.object(tasks.task_process_meta, "delay") as next_task:
+            tasks.task_retry_records("failed")
+            self.assertEqual(next_task.call_count, 3)
 
-        # test four, completely mismatched bibcodes
-        bibcode_a = "2000ApJ...999..999Z"
-        bibcode_b = "1900A&A...123..456X"
-        correct_returnDict = {"match": "mismatch", "bibcode": "1900A&A...123..456X"}
-        test_returnDict = cm._match_bibcode_permutations(bibcode_a, bibcode_b)
-        self.assertEqual(test_returnDict, correct_returnDict)
 
-        # test five, wrong author initial, year, volume, and page
-        bibcode_a = "2000ApJ...999..999Z"
-        bibcode_b = "2001ApJ...998..987Q"
-        correct_returnDict = {
-            "match": "partial",
-            "bibcode": "2001ApJ...998..987Q",
-            "errs": {"init": "Q", "page": ".987", "vol": ".998", "year": "2001"},
-        }
-        test_returnDict = cm._match_bibcode_permutations(bibcode_a, bibcode_b)
-        self.assertEqual(test_returnDict, correct_returnDict)
 
-        # test six, identical bibcodes
-        # note, for completeness only -- in production this shouldn't happen
-        bibcode_a = "2000ApJ...999..999Z"
-        bibcode_b = "2000ApJ...999..999Z"
-        test_returnDict = cm._match_bibcode_permutations(bibcode_a, bibcode_b)
-        correct_returnDict = {"match": "partial", "errs": {}, "bibcode": "2000ApJ...999..999Z"}
-        self.assertEqual(test_returnDict, correct_returnDict)
 
-    def test_match(self):
-        cm = CrossrefMatcher()
 
-        # test seven, exact match exists in canonical for bibcode and DOI
-        test_input_bibcode = "2000ApJ...999..999Z"
-        test_bibcodesFromDoi = [("2000ApJ...999..999Z", "2000ApJ...999..999Z", "canonical")]
-        test_bibcodesFromBib = [("2000ApJ...999..999Z", "2000ApJ...999..999Z", "canonical")]
-        test_returnDict = cm.match(test_input_bibcode, test_bibcodesFromDoi, test_bibcodesFromBib)
-        correct_returnDict = {"bibcode": "2000ApJ...999..999Z", "errs": {}, "match": "canonical"}
-        self.assertEqual(test_returnDict, correct_returnDict)
 
-        # test eight, DOI assigned to different but similar bibcode in classic,
-        #     no canonical, alternate, or deleted matches
-        test_input_bibcode = "2000ApJ...999..999Z"
-        test_bibcodesFromDoi = [("2000ApJ...999..777Q", "2000ApJ...999..777Q", "canonical")]
-        test_bibcodesFromBib = []
-        test_returnDict = cm.match(test_input_bibcode, test_bibcodesFromDoi, test_bibcodesFromBib)
-        correct_returnDict = {
-            "bibcode": "2000ApJ...999..777Q",
-            "errs": {"page": ".777", "init": "Q"},
-            "match": "partial",
-        }
-        self.assertEqual(test_returnDict, correct_returnDict)
 
-        # test nine, DOI assigned to totally different bibcode in classic,
-        #     no canonical, alternate, or deleted matches
-        test_input_bibcode = "2000ApJ...999..999Z"
-        test_bibcodesFromDoi = [("1900A&A...123..456X", "1900A&A...123..456X", "canonical")]
-        test_bibcodesFromBib = []
-        test_returnDict = cm.match(test_input_bibcode, test_bibcodesFromDoi, test_bibcodesFromBib)
-        correct_returnDict = {"bibcode": "1900A&A...123..456X", "match": "mismatch"}
-        self.assertEqual(test_returnDict, correct_returnDict)
 
-        # test ten, neither bibcode nor DOI in classic
-        test_input_bibcode = "2000ApJ...999..999Z"
-        test_bibcodesFromDoi = []
-        test_bibcodesFromBib = []
-        test_returnDict = cm.match(test_input_bibcode, test_bibcodesFromDoi, test_bibcodesFromBib)
-        correct_returnDict = {
-            "bibcode": None,
-            "errs": {"DOI": "DOI not in classic"},
-            "match": "unmatched",
-        }
-        self.assertEqual(test_returnDict, correct_returnDict)
 
-        # test eleven, conflicting exact matches exist in canonical
-        test_input_bibcode = "2000ApJ...999..999Z"
-        test_bibcodesFromDoi = [("2000ApJ...999..777Q", "2000ApJ...999..777Q", "canonical")]
-        test_bibcodesFromBib = [("2000ApJ...999..999Z", "2000ApJ...999..999Z", "canonical")]
-        test_returnDict = cm.match(test_input_bibcode, test_bibcodesFromDoi, test_bibcodesFromBib)
-        correct_returnDict = {
-            "bibcode": "2000ApJ...999..777Q",
-            "errs": {"DOI": "DOI mismatched", "bibcode": "2000ApJ...999..999Z"},
-            "match": "mismatch",
-        }
-        self.assertEqual(test_returnDict, correct_returnDict)
 
-        # test twelve, bibcode exists in classic, DOI does not
-        test_input_bibcode = "2000ApJ...999..999Z"
-        test_bibcodesFromDoi = []
-        test_bibcodesFromBib = [("2000ApJ...999..999Z", "2000ApJ...999..999Z", "canonical")]
-        test_returnDict = cm.match(test_input_bibcode, test_bibcodesFromDoi, test_bibcodesFromBib)
-        correct_returnDict = {
-            "bibcode": "2000ApJ...999..999Z",
-            "errs": {"DOI": "DOI not in classic"},
-            "match": "canonical",
-        }
-        self.assertEqual(test_returnDict, correct_returnDict)
+
+
+
+
+
+

@@ -12,3 +12,7 @@ JOURNALSDB_RELATED_BIBSTEMS = "/app/data/related_bibstems.json"
 
 CLASSIC_DATA_BLOCKSIZE = 10000
 RECORDS_PER_BATCH = 250
+
+
+CELERY_INCLUDE = ['adscompstat.tasks']
+CELERY_BROKER = 'pyamqp://user:password@localhost:6672/compstat'

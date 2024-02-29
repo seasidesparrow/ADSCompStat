@@ -27,7 +27,7 @@ logger = app.logger
 
 app.conf.CELERY_QUEUES = (
     Queue("write-db", app.exchange, routing_key="write-db"),
-    Queue("get-logfiles", app.exchange, routing_key="get-logfiles"),
+    Queue("get_logfiles", app.exchange, routing_key="get_logfiles"),
     Queue("process-meta", app.exchange, routing_key="process-meta"),
     Queue("compute-stats", app.exchange, routing_key="compute-stats"),
 )
@@ -116,7 +116,7 @@ def task_write_matched_record_to_db(record):
             logger.warning("DB write error: %s; Record: %s" % (err, record))
 
 
-@app.task(queue="get-logfiles")
+@app.task(queue="get_logfiles")
 def task_process_logfile(infile):
     """
     Parse one oaipmh harvesting logfile to retrieve newly downloaded records,
@@ -472,7 +472,7 @@ def task_export_completeness_to_json():
             logger.error("Unable to export completeness data to disk: %s" % err)
 
 
-@app.task(queue="get-logfiles")
+@app.task(queue="get_logfiles")
 def task_retry_records(rec_type):
     with app.session_scope() as session:
         batch_count = app.conf.get("RECORDS_PER_BATCH", 100)
