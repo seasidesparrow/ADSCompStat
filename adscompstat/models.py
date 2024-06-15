@@ -5,7 +5,8 @@ except ImportError:
 
 from sqlalchemy import Column, Float, Integer, String, Text
 from sqlalchemy.dialects.postgresql import ENUM
-from sqlalchemy.ext.declarative import declarative_base
+#from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import declarative_base
 
 Base = declarative_base()
 

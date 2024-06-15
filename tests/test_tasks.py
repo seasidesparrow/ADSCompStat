@@ -25,7 +25,7 @@ class TestTasks(unittest.TestCase):
         tasks.app = self.app  # monkey-path the app object
 
         Base.metadata.bind = self.app._session.get_bind()
-        Base.metadata.create_all()
+        Base.metadata.create_all(bind=Base.metadata.bind)
 
     def test_task_clear_classic_data(self):
         with patch.object(db, "clear_classic_data") as next_task:

@@ -241,7 +241,7 @@ def write_completeness_summary(app, summary_data):
 def write_block(app, table, datablock):
     with app.session_scope() as session:
         try:
-            session.bulk_insert_mappings(table, datablock)
+            session.execute(insert(table),datablock)
             session.commit()
         except Exception as err:
             session.rollback()

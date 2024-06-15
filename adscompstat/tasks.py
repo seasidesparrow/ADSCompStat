@@ -46,6 +46,7 @@ def task_clear_classic_data():
         logger.warning("Unable to clear classic data: %s" % err)
 
 
+@app.task(queue="write-db")
 def task_write_block(table, datablock):
     try:
         db.write_block(app, table, datablock)
