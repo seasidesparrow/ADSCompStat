@@ -73,6 +73,7 @@ class CompStatSummary(Base):
     volume = Column(String, nullable=False)
     paper_count = Column(Integer, nullable=False)
     complete_fraction = Column(Float, nullable=True)
+    complete_by_year = Column(Text, nullable=True)
     complete_details = Column(Text, nullable=True)
     created = Column(UTCDateTime, default=get_date)
     updated = Column(UTCDateTime, onupdate=get_date)
@@ -87,7 +88,8 @@ class CompStatSummary(Base):
             "volume": self.volume,
             "paper_count": self.paper_count,
             "complete_fraction": self.complete_fraction,
-            "complete_details": self.complete_byvolume,
+            "complete_by_year": self.complete_by_year,
+            "complete_details": self.complete_details,
             "created": self.created,
             "updated": self.updated,
         }

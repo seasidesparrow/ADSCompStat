@@ -1,4 +1,5 @@
 import argparse
+import datetime
 import os
 
 from adsputils import load_config, setup_logging
@@ -69,6 +70,14 @@ def get_arguments():
         default=False,
         help="Export completeness summary to JSON file",
     )
+    parser.add_argument(
+        "-r",
+        "--retry",
+        dest="do_retry",
+        action="store_true",
+        default=False,
+        help="Retry all mismatched and unmatched records",
+    )
 
     args = parser.parse_args()
     return args
@@ -81,29 +90,26 @@ def get_logs(args):
         (dates, pubdois) = utils.parse_pub_and_date_from_logs(logfiles)
         if args.do_pub:
             if args.do_pub in pubdois:
+                newlogs = list()
                 try:
-                    newlogs = list()
                     for logfile in logfiles:
                         if args.do_pub in logfile:
                             newlogs.append(logfile)
-                    logfiles = newlogs
                 except Exception as err:
                     raise GetLogException(
                         "Problem selecting publisher (%s): %s" % (args.do_pub, err)
                     )
+                logfiles = newlogs
             else:
                 raise GetLogException("No log files available for publisher %s" % args.do_pub)
         if args.do_latest:
-            latestDate = dates[-1]
-            try:
-                newlogs = list()
-                for logfile in logfiles:
-                    if latestDate in logfile:
-                        newlogs.append(logfile)
-                logfiles = newlogs
-            except Exception as err:
-                raise GetLogException("Problem selecting most recent (%s): %s" % (latestDate, err))
-        # elif args.do_since:
+            today = datetime.datetime.today()
+            newlogs = list()
+            for ff in logfiles:
+                age = today - datetime.datetime.fromtimestamp(os.path.getmtime(ff))
+                if age.days < 14:
+                    newlogs.append(ff)
+            logfiles = newlogs
     return logfiles
 
 
@@ -114,9 +120,11 @@ def write_to_database(table_def, data):
         if data and table_def:
             i = 0
             while i < total_rows:
-                logger.info("Writing to db: %s of %s rows remaining" % (len(data) - i, total_rows))
+                logger.debug(
+                    "Writing to db: %s of %s rows remaining" % (len(data) - i, total_rows)
+                )
                 insertblock = data[i : (i + blocksize)]
-                tasks.task_write_block_to_db(table_def, insertblock)
+                tasks.task_write_block(table_def, insertblock)
                 i += blocksize
     except Exception as err:
         raise DBWriteException(err)
@@ -177,10 +185,13 @@ def main():
             tasks.task_do_all_completeness()
         elif args.do_json_export:
             tasks.task_export_completeness_to_json()
+        elif args.do_retry:
+            for result_type in ["mismatch", "unmatched", "failed"]:
+                tasks.task_retry_records.delay(result_type)
         else:
             logfiles = get_logs(args)
             if not logfiles:
-                logger.warn("No logfiles found! Nothing to do -- stopping.")
+                logger.warning("No logfiles found! Nothing to do -- stopping.")
             else:
                 for logfile in logfiles:
                     tasks.task_process_logfile.delay(logfile)
