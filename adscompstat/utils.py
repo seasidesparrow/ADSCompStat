@@ -3,12 +3,10 @@ import os
 import re
 from glob import glob
 
-from adsingestp.parsers.base import BaseBeautifulSoupParser
 from adsingestp.parsers.crossref import CrossrefParser
 from adsputils import load_config, setup_logging
 
 from adscompstat.exceptions import (
-    BaseParseException,
     CompletenessFractionException,
     CrossRefParseException,
     JsonExportException,
@@ -18,7 +16,6 @@ from adscompstat.exceptions import (
     MissingFilenameException,
     NoHarvestLogsException,
     ParseLogsException,
-    ParseMetaXMLException,
     ReadLogException,
 )
 
@@ -66,7 +63,6 @@ def read_updateagent_log(logfile):
         with open(logfile, "r") as fl:
             for line in fl.readlines():
                 (filename, harvest_time) = line.strip().split("\t")
-                # xmlfiles.append({'filename': filename, 'harvest_time': harvest_time})
                 xmlfiles.append(filename)
     except Exception as err:
         raise ReadLogException(err)
@@ -92,8 +88,6 @@ def process_one_meta_xml(infile):
                 raise CrossRefParseException(err)
             else:
                 if record:
-                    # field the bib data parsed from the record into a
-                    # processedRecord to be sent to task_match_with_classic
                     publication = record.get("publication", None)
                     first_author = record.get("authors", [])[0]
                     title = record.get("title", None)
@@ -141,34 +135,7 @@ def process_one_meta_xml(infile):
     return processedRecord
 
 
-def simple_parse_one_meta_xml(infile):
-    try:
-        with open(infile, "r") as fx:
-            data = fx.read()
-            try:
-                parser = BaseBeautifulSoupParser()
-                record = parser.bsstrtodict(data)
-                doi = record.find("doi").get_text()
-                issn_all = record.find_all("issn")
-                issns = []
-                for issn in issn_all:
-                    if issn.get_text() and re_issn.match(issn.get_text()):
-                        if issn.has_attr("media_type"):
-                            issns.append((issn["media_type"], issn.get_text()))
-                        else:
-                            issns.append(("print", issn.get_text()))
-            except Exception as err:
-                raise BaseParseException(err)
-        return (doi, issns)
-    except Exception as err:
-        raise ParseMetaXMLException(err)
-
-
-# loading bibcode-doi and bibstem-issn data into postgres
-
-
 def load_classic_doi_bib_map(infile):
-    # Classic: DOI-bibcode mapping
     records_bib_doi = list()
     found_doi = dict()
     try:
@@ -217,8 +184,7 @@ def load_classic_canonical_list(infile):
                 if len(bibcode) == 19:
                     canonicalList.append(bibcode)
                 else:
-                    # logger.debug("bad line in %s: %s" % (infile, l.strip()))
-                    pass
+                    logger.debug("bad line in %s: %s" % (infile, line.strip()))
     except Exception as err:
         raise LoadClassicDataException("Unable to load canonical bibcodes list! %s" % err)
     return canonicalList
@@ -232,8 +198,6 @@ def load_classic_noncanonical_bibs(bibfile):
                 try:
                     (noncbib, canonical) = line.strip().split()
                 except Exception:
-                    # logger.debug("singleton bibcode in %s: %s" % (infile, l.strip()))
-                    # pass
                     noncbib = line.strip()
                     canonical = "none"
                 if not noncbibcodes.get(noncbib, None):
@@ -292,23 +256,53 @@ def merge_bibcode_lists(canonicalfile, alternatefile, deletedfile, allfile):
 def get_completeness_fraction(byVolumeData):
     matches = ["canonical", "partial", "alternate", "deleted"]
     unmatches = ["mismatch", "unmatched"]
-    totalMatch = 0
-    totalUnmatch = 0
-    totalNoIndex = 0
+    # totalMatch = 0
+    # totalUnmatch = 0
+    # totalNoIndex = 0
+    totalMatch = {}
+    totalUnmatch = {}
+    totalNoIndex = {}
+    volumeYears = []
     try:
         for rec in byVolumeData:
             match = rec.get("matchtype")
             status = rec.get("status")
             count = rec.get("count")
+            year = str(rec.get("year"))
+            if year not in volumeYears:
+                volumeYears.append(year)
             if match in matches:
-                totalMatch += count
+                if totalMatch.get(year, 0):
+                    totalMatch[year] += count
+                else:
+                    totalMatch[year] = count
             elif match in unmatches:
-                totalUnmatch += count
+                if totalUnmatch.get(year, 0):
+                    totalUnmatch[year] += count
+                else:
+                    totalUnmatch[year] = count
             elif status == "NoIndex":
-                totalNoIndex += count
-        totalIndexable = totalMatch + totalUnmatch
-        completenessFraction = totalMatch / totalIndexable
-        return (totalIndexable, completenessFraction)
+                if totalNoIndex.get(year, 0):
+                    totalNoIndex[year] += count
+                else:
+                    totalNoIndex[year] = count
+        years = []
+        volumeIndexable = 0
+        volumeMatched = 0
+        for y in volumeYears:
+            year = {"year": y,
+                    "ADS_records": totalMatch[y],
+                    "Crossref_records": (totalMatch[y]+totalUnmatch[y]),
+                    "completeness": (totalMatch[y]/(totalMatch[y]+totalUnmatch[y]))}
+            
+            volumeMatched += totalMatch[y]
+            volumeIndexable += totalMatch[y] + totalUnmatch[y]
+            years.append(year)
+        completenessBundle = {"by_year": years,
+                              "volumeMatched": volumeMatched,
+                              "volumeIndexable": volumeIndexable,
+                              "volumeCompleteness": (volumeMatched/volumeIndexable)}
+        return completenessBundle
     except Exception as err:
         raise CompletenessFractionException("Unable to calculate completeness: %s" % err)
 

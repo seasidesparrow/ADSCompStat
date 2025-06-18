@@ -1,6 +1,6 @@
 [project]
 name = "adscompstat"
-version = "0.9.7"
+version = "0.9.8"
 description = "Collection completeness statistics management"
 authors = [{ name = "Matthew Templeton", email = "matthew.templeton@cfa.harvard.edu"}]
 license = { text = "MIT" }
@@ -20,12 +20,12 @@ packages = [
 
 dependencies = [
     'click>=8.0.3',
-    'adsputils==1.4.3',
+    'adsputils==1.5.2',
     'psycopg2-binary==2.9.3',
     'SQLAlchemy-Utils==0.38.2',
     'alembic==1.0.0',
-    'adsingestp @ git+https://github.com/adsabs/ADSIngestParser.git@v0.9.7',
-    'adsenrich @ git+https://github.com/adsabs/ADSIngestEnrichment.git@v0.1.9',
+    'adsingestp @ git+https://github.com/adsabs/ADSIngestParser.git@v0.9.41',
+    'adsenrich @ git+https://github.com/adsabs/ADSIngestEnrichment.git@v0.9.24',
 ]
 
 
@@ -60,11 +60,11 @@ docs = [
 [tool.semantic_release]
 branch = "main"
 version_toml = "pyproject.toml:project.version"
-version_variable = "adsingestp/version.py:__version__"
+version_variable = "adscompstat/version.py:__version__"
 build_command = "flit build"
 
 [tool.pytest.ini_options]
-addopts = "-v -Wdefault --cov=adsingestp"
+addopts = "-v -Wdefault --cov=adscompstat"
 cache_dir = ".tmp/"
 
 [tool.coverage.run]
