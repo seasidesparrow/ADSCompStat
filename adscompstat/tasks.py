@@ -254,7 +254,7 @@ def task_completeness_per_bibstem(bibstem):
         volumeSummary = dict()
         for r in result:
             vol = r[0]
-            if vol[-1] not in ["L", "P", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9"]:
+            if vol[-1] not in ["L", "P"]:
                 vol = vol[0:-1]
             vol = vol.lstrip(".").rstrip(".")
             year = r[1]
