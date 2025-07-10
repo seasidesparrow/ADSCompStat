@@ -289,6 +289,7 @@ def task_completeness_per_bibstem(bibstem):
                     logger.warning("Error writing completeness data to db: %s" % err)
 
 
+@app.task(queue="compute-stats")
 def task_do_all_completeness():
     try:
         bibstems = db.query_master_bibstems(app)
