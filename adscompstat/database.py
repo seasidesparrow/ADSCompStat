@@ -195,6 +195,7 @@ def query_summary_single_bibstem(app, bibstem):
                     summary.volume,
                     summary.complete_fraction,
                     summary.paper_count,
+                    summary.complete_by_year,
                 )
                 .filter(summary.bibstem == bibstem)
                 .all()

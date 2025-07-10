@@ -316,7 +316,10 @@ def task_export_completeness_to_json():
             volume_per_year = {}
             for r in result:
                 vol = r[1]
-                years = r[4]
+                years = json.loads(r[4]) or []
+                if years:
+                    yn = [x.get("year", "") for x in years]
+                    years = list(set(yn))
                 if type(r[2]) == float:
                     r2_export = math.floor(10000 * r[2] + 0.5) / 10000.0
                 else:
