@@ -313,21 +313,31 @@ def task_export_completeness_to_json():
             result = db.query_summary_single_bibstem(app, bib)
             paperCount = 0
             averageCompleteness = 0.0
+            volume_per_year = {}
             for r in result:
+                vol = r[1]
+                years = r[4]
                 if type(r[2]) == float:
                     r2_export = math.floor(10000 * r[2] + 0.5) / 10000.0
                 else:
                     r2_export = r[2]
-                completeness.append({"volume": r[1], "completeness_fraction": r2_export})
+                completeness.append({"volume": r[1], "volume_completeness_fraction": r2_export})
                 paperCount += r[3]
                 averageCompleteness += r[3] * r[2]
+                for y in years:
+                    if volume_per_year.get(y, []):
+                        if vol not in volume_per_year[y]:
+                            volume_per_year[y].append(vol)
+                    else:
+                        volume_per_year[y] = [vol]
             averageCompleteness = averageCompleteness / paperCount
             avg_export = math.floor(10000 * averageCompleteness + 0.5) / 10000.0
             allData.append(
                 {
                     "bibstem": bib,
-                    "completeness_fraction": avg_export,
+                    "title_completeness_fraction": avg_export,
                     "completeness_details": completeness,
+                    "volume_by_year": volume_per_year,
                 }
             )
         if allData:
