@@ -291,10 +291,15 @@ def get_completeness_fraction(byVolumeData):
         volumeIndexable = 0
         volumeMatched = 0
         for y in volumeYears:
+            totalRecs = totalMatch.get(y,0)+totalUnmatch.get(y,0)
+            if totalRecs == 0:
+                completeness = 0
+            else:
+                completeness = totalMatch.get(y,0)/totalRecs
             year = {"year": y,
                     "ADS_records": totalMatch.get(y, 0),
-                    "Crossref_records": (totalMatch.get(y,0)+totalUnmatch.get(y,0)),
-                    "completeness": (totalMatch.get(y,0)/(totalMatch.get(y,0)+totalUnmatch.get(y,0)))}
+                    "Crossref_records": totalRecs,
+                    "completeness": completeness}
             
             volumeMatched += totalMatch.get(y,0)
             volumeIndexable += totalMatch.get(y,0) + totalUnmatch.get(y,0)
