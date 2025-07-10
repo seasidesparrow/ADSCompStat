@@ -107,7 +107,7 @@ def get_logs(args):
             newlogs = list()
             for ff in logfiles:
                 age = today - datetime.datetime.fromtimestamp(os.path.getmtime(ff))
-                if age.days < 14:
+                if age.days < 7:
                     newlogs.append(ff)
             logfiles = newlogs
     return logfiles

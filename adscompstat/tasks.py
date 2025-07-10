@@ -254,7 +254,7 @@ def task_completeness_per_bibstem(bibstem):
         volumeSummary = dict()
         for r in result:
             vol = r[0]
-            if vol[-1] not in ["L", "P", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9"]:
+            if vol[-1] not in ["L", "P"]:
                 vol = vol[0:-1]
             vol = vol.lstrip(".").rstrip(".")
             year = r[1]
@@ -289,6 +289,7 @@ def task_completeness_per_bibstem(bibstem):
                     logger.warning("Error writing completeness data to db: %s" % err)
 
 
+@app.task(queue="compute-stats")
 def task_do_all_completeness():
     try:
         bibstems = db.query_master_bibstems(app)
@@ -312,21 +313,37 @@ def task_export_completeness_to_json():
             result = db.query_summary_single_bibstem(app, bib)
             paperCount = 0
             averageCompleteness = 0.0
+            volume_per_year = {}
             for r in result:
+                vol = r[1]
+                try:
+                    years = json.loads(r[4])
+                except:
+                    years = []
+                if years:
+                    yn = [x.get("year", "") for x in years]
+                    years = list(set(yn))
                 if type(r[2]) == float:
                     r2_export = math.floor(10000 * r[2] + 0.5) / 10000.0
                 else:
                     r2_export = r[2]
-                completeness.append({"volume": r[1], "completeness_fraction": r2_export})
+                completeness.append({"volume": r[1], "volume_completeness_fraction": r2_export})
                 paperCount += r[3]
                 averageCompleteness += r[3] * r[2]
+                for y in years:
+                    if volume_per_year.get(y, []):
+                        if vol not in volume_per_year[y]:
+                            volume_per_year[y].append(vol)
+                    else:
+                        volume_per_year[y] = [vol]
             averageCompleteness = averageCompleteness / paperCount
             avg_export = math.floor(10000 * averageCompleteness + 0.5) / 10000.0
             allData.append(
                 {
                     "bibstem": bib,
-                    "completeness_fraction": avg_export,
+                    "title_completeness_fraction": avg_export,
                     "completeness_details": completeness,
+                    "volume_by_year": volume_per_year,
                 }
             )
         if allData:
