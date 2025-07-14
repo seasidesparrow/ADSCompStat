@@ -314,36 +314,46 @@ def task_export_completeness_to_json():
             paperCount = 0
             averageCompleteness = 0.0
             volume_per_year = {}
+            volumes = {}
             for r in result:
                 vol = r[1]
                 try:
+                    # r[4] is the "complete_by_year" column
                     years = json.loads(r[4])
                 except:
                     years = []
-                if years:
-                    yn = [x.get("year", "") for x in years]
-                    years = list(set(yn))
+                for y in years:
+                    year = y.get("year", "0")
+                    adscount = y.get("ADS_records", 0)
+                    xrfcount = y.get("Crossref_records", 0)
+                    if xrfcount > 0:
+                        vfrac = math.floor(
+                            10000. * (adscount/xrfcount) + 0.5) / 10000.0
+                    else:
+                        vfrac = 0.0
+                    volcomp = {
+                        "volume": vol,
+                        "ADS_records": adscount,
+                        "Crossref_records": xrfcount,
+                        "completeness_fraction": vfrac
+                    }
+                    if volumes.get(year):
+                        volumes[year].append(volcomp)
+                    else:
+                        volumes[year] = [volcomp]
                 if type(r[2]) == float:
                     r2_export = math.floor(10000 * r[2] + 0.5) / 10000.0
                 else:
                     r2_export = r[2]
-                completeness.append({"volume": r[1], "volume_completeness_fraction": r2_export})
                 paperCount += r[3]
                 averageCompleteness += r[3] * r[2]
-                for y in years:
-                    if volume_per_year.get(y, []):
-                        if vol not in volume_per_year[y]:
-                            volume_per_year[y].append(vol)
-                    else:
-                        volume_per_year[y] = [vol]
             averageCompleteness = averageCompleteness / paperCount
             avg_export = math.floor(10000 * averageCompleteness + 0.5) / 10000.0
             allData.append(
                 {
                     "bibstem": bib,
                     "title_completeness_fraction": avg_export,
-                    "completeness_details": completeness,
-                    "volume_by_year": volume_per_year,
+                    "completeness_details": volumes
                 }
             )
         if allData:
