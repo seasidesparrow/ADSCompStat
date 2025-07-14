@@ -370,7 +370,7 @@ def task_export_completeness_to_json():
                     "bibstem": bib,
                     "title_completeness_fraction": avg_export,
                     "completeness_details": volcomp,
-                    "eariest_year": earliestYear,
+                    "earliest_year": earliestYear,
                     "latest_year": latestYear
                 }
             )
