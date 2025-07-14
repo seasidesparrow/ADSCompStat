@@ -349,11 +349,24 @@ def task_export_completeness_to_json():
                 averageCompleteness += r[3] * r[2]
             averageCompleteness = averageCompleteness / paperCount
             avg_export = math.floor(10000 * averageCompleteness + 0.5) / 10000.0
+            #restructure volumes
+            volcomp = []
+            yearlist = []
+            for k, v in volumes.items():
+                output = {"year": k,
+                          "volumes": v}
+                yearlist.append(int(k))
+                volcomp.append(output)
+            yearlist = list(set(yearlist))
+            earliestYear = min(yearlist)
+            latestYear = max(yearlist)
             allData.append(
                 {
                     "bibstem": bib,
                     "title_completeness_fraction": avg_export,
-                    "completeness_details": volumes
+                    "completeness_details": volcomp,
+                    "eariest_year": earliestYear,
+                    "latest_year": latestYear
                 }
             )
         if allData:
