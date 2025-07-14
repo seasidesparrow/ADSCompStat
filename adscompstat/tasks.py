@@ -353,9 +353,14 @@ def task_export_completeness_to_json():
             volcomp = []
             yearlist = []
             for k, v in volumes.items():
+                try:
+                    int(k)
+                except:
+                    pass
+                else:
+                    yearlist.append(int(k))
                 output = {"year": k,
                           "volumes": v}
-                yearlist.append(int(k))
                 volcomp.append(output)
             yearlist = list(set(yearlist))
             earliestYear = min(yearlist)
