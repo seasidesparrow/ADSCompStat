@@ -3,8 +3,8 @@ try:
 except ImportError:
     from adsmutils import get_date, UTCDateTime
 
-from sqlalchemy import Column, Float, Integer, String, Text
-from sqlalchemy.dialects.postgresql import ENUM, JSONB
+from sqlalchemy import Column, Float, Integer, String, Text, Boolean
+from sqlalchemy.dialects.postgresql import ENUM, JSON, JSONB
 from sqlalchemy.ext.declarative import declarative_base
 
 Base = declarative_base()
@@ -21,7 +21,7 @@ class CompStatMasterNew(Base):
     master_bibdata = Column(JSONB, nullable=False)
     doi_found = Column(Boolean, nullable=True)
     record_matched = Column(Boolean, nullable=True)
-    master_record_id = Column(string, unique=True, nullable=True)
+    master_record_id = Column(String, unique=True, nullable=True)
     notes = Column(String, nullable=True)
     created = Column(UTCDateTime, default=get_date)
     updated = Column(UTCDateTime, onupdate=get_date)
@@ -67,9 +67,9 @@ class CompStatMaster(Base):
     masterid = Column(Integer, primary_key=True, unique=True)
     harvest_filepath = Column(String, nullable=False)
     master_doi = Column(String, unique=True, nullable=False)
-    issns = Column(JSON, nullable=True)
+    issns = Column(Text, nullable=True)
     db_origin = Column(String, nullable=False)
-    master_bibdata = Column(JSON, nullable=False)
+    master_bibdata = Column(Text, nullable=False)
     classic_match = Column(Text, nullable=True)
     status = Column(match_status, nullable=False)
     matchtype = Column(match_type, nullable=False)
