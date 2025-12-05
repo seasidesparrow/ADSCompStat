@@ -4,10 +4,48 @@ except ImportError:
     from adsmutils import get_date, UTCDateTime
 
 from sqlalchemy import Column, Float, Integer, String, Text
-from sqlalchemy.dialects.postgresql import ENUM
+from sqlalchemy.dialects.postgresql import ENUM, JSONB
 from sqlalchemy.ext.declarative import declarative_base
 
 Base = declarative_base()
+
+
+class CompStatMasterNew(Base):
+    __tablename__ = "master_new"
+
+    masterid = Column(Integer, primary_key=True, unique=True)
+    harvest_filepath = Column(String, nullable=False)
+    master_doi = Column(String, unique=True, nullable=False)
+    issns = Column(JSONB, nullable=True)
+    db_origin = Column(String, nullable=False)
+    master_bibdata = Column(JSONB, nullable=False)
+    doi_found = Column(Boolean, nullable=True)
+    record_matched = Column(Boolean, nullable=True)
+    master_record_id = Column(string, unique=True, nullable=True)
+    notes = Column(String, nullable=True)
+    created = Column(UTCDateTime, default=get_date)
+    updated = Column(UTCDateTime, onupdate=get_date)
+
+    def __repr__(self):
+        return "master_new.masterid='{self.masterid}', master_new.db_origin='{self.db_origin}', master_new.master_doi='{self.master_doi}'".format(
+            self=self
+        )
+
+    def toJSON(self):
+        return {
+            "masterid": self.masterid,
+            "harvest_filepath": self.harvest_filepath,
+            "master_doi": self.master_doi,
+            "issns": self.issns,
+            "db_origin": self.db_origin,
+            "master_bibdata": self.master_bibdata,
+            "doi_found": self.doi_found,
+            "record_matched": self.record_matched,
+            "master_record_id": self.master_record_id,
+            "notes": self.notes,
+            "created": self.created,
+            "updated": self.updated,
+        }
 
 
 class CompStatMaster(Base):
@@ -29,9 +67,9 @@ class CompStatMaster(Base):
     masterid = Column(Integer, primary_key=True, unique=True)
     harvest_filepath = Column(String, nullable=False)
     master_doi = Column(String, unique=True, nullable=False)
-    issns = Column(Text, nullable=True)
+    issns = Column(JSON, nullable=True)
     db_origin = Column(String, nullable=False)
-    master_bibdata = Column(Text, nullable=False)
+    master_bibdata = Column(JSON, nullable=False)
     classic_match = Column(Text, nullable=True)
     status = Column(match_status, nullable=False)
     matchtype = Column(match_type, nullable=False)
