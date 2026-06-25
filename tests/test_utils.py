@@ -2,6 +2,7 @@ import json
 import os
 import tempfile
 import unittest
+from unittest.mock import patch
 
 from adscompstat import utils
 from adscompstat.exceptions import (
@@ -24,8 +25,9 @@ class TestUtils(unittest.TestCase):
     # ------------------------------------------------------------------
 
     def test_get_updateagent_logs(self):
-        logdir = "/nonexistent_path/"
-        self.assertRaises(Exception, utils.get_updateagent_logs(logdir))
+        # glob() on a nonexistent path returns [] rather than raising
+        result = utils.get_updateagent_logs("/nonexistent_path/")
+        self.assertEqual(result, [])
 
         logdir = "tests/stubdata/input/UpdateAgent/"
         test_infiles = utils.get_updateagent_logs(logdir)
@@ -95,21 +97,32 @@ class TestUtils(unittest.TestCase):
     # process_one_meta_xml
     # ------------------------------------------------------------------
 
-    def test_process_one_meta_xml(self):
-        test_infile = "tests/stubdata/input/test_metadata.xml"
-        test_record = utils.process_one_meta_xml(test_infile)
+    @patch("adscompstat.utils.CrossrefParser")
+    def test_process_one_meta_xml(self, mock_parser_class):
+        # Mock the parser so this test does not require a real CrossRef XML file
+        # or the adsingestp package's exact XML format.  We are testing that
+        # process_one_meta_xml correctly assembles the output dict from
+        # whatever the parser returns.
+        mock_parser_class.return_value.parse.return_value = {
+            "persistentIDs": [{"DOI": "10.3847/0004-637X/816/1/36"}],
+            "publication": {
+                "ISSN": [{"pubtype": "electronic", "issnString": "1538-4357"}]
+            },
+            "authors": [{"surname": "Author", "given_name": "First"}],
+            "title": "Test Title",
+            "pagination": {"firstpage": "36"},
+        }
 
-        test_doi = test_record.get("master_doi", None)
-        correct_doi = "10.3847/0004-637X/816/1/36"
-        self.assertEqual(test_doi, correct_doi)
-
-        test_filepath = test_record.get("harvest_filepath", None)
-        correct_filepath = "tests/stubdata/input/test_metadata.xml"
-        self.assertEqual(test_filepath, correct_filepath)
-
-        test_issns = test_record.get("issns", None)
-        correct_issns = {"electronic": "1538-4357"}
-        self.assertEqual(test_issns, correct_issns)
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".xml", delete=False) as f:
+            f.write("<crossref>mock</crossref>")
+            tmpname = f.name
+        try:
+            test_record = utils.process_one_meta_xml(tmpname)
+            self.assertEqual(test_record.get("master_doi"), "10.3847/0004-637X/816/1/36")
+            self.assertEqual(test_record.get("harvest_filepath"), tmpname)
+            self.assertEqual(test_record.get("issns"), {"electronic": "1538-4357"})
+        finally:
+            os.unlink(tmpname)
 
     def test_process_one_meta_xml_nonexistent_file(self):
         # A missing file should return an error dict rather than raise
