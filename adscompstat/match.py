@@ -32,9 +32,9 @@ class CrossrefMatcher(object):
         return status
 
     def _match_bibcode_permutations(self, testBibcode, classicBibcode):
+        returnDict = {}
         if testBibcode and classicBibcode:
             try:
-                returnDict = {}
                 # check the year
                 testYear = testBibcode[0:4]
                 classicYear = classicBibcode[0:4]
