@@ -291,23 +291,27 @@ def get_completeness_fraction(byVolumeData):
         volumeIndexable = 0
         volumeMatched = 0
         for y in volumeYears:
-            totalRecs = totalMatch.get(y,0)+totalUnmatch.get(y,0)
+            totalRecs = totalMatch.get(y, 0) + totalUnmatch.get(y, 0)
             if totalRecs == 0:
                 completeness = 0
             else:
-                completeness = totalMatch.get(y,0)/totalRecs
-            year = {"year": y,
-                    "ADS_records": totalMatch.get(y, 0),
-                    "Crossref_records": totalRecs,
-                    "completeness": completeness}
-            
-            volumeMatched += totalMatch.get(y,0)
-            volumeIndexable += totalMatch.get(y,0) + totalUnmatch.get(y,0)
+                completeness = totalMatch.get(y, 0) / totalRecs
+            year = {
+                "year": y,
+                "ADS_records": totalMatch.get(y, 0),
+                "Crossref_records": totalRecs,
+                "completeness": completeness,
+            }
+
+            volumeMatched += totalMatch.get(y, 0)
+            volumeIndexable += totalMatch.get(y, 0) + totalUnmatch.get(y, 0)
             years.append(year)
-        completenessBundle = {"by_year": years,
-                              "volumeMatched": volumeMatched,
-                              "volumeIndexable": volumeIndexable,
-                              "volumeCompleteness": (volumeMatched/volumeIndexable)}
+        completenessBundle = {
+            "by_year": years,
+            "volumeMatched": volumeMatched,
+            "volumeIndexable": volumeIndexable,
+            "volumeCompleteness": (volumeMatched / volumeIndexable),
+        }
         return completenessBundle
     except Exception as err:
         raise CompletenessFractionException("Unable to calculate completeness: %s" % err)
