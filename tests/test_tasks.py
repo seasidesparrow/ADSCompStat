@@ -25,12 +25,12 @@ import json
 import math
 import sys
 import unittest
-from unittest.mock import MagicMock, call, patch
-
+from unittest.mock import MagicMock, patch
 
 # ---------------------------------------------------------------------------
 # Module-level mocking — must happen before ``from adscompstat import tasks``
 # ---------------------------------------------------------------------------
+
 
 def _make_task_decorator(**_kwargs):
     """Return a decorator that leaves the wrapped function unchanged."""
@@ -38,7 +38,7 @@ def _make_task_decorator(**_kwargs):
 
 
 _mock_app = MagicMock()
-_mock_app.conf.get.return_value = None      # RECORDS_PER_BATCH, paths, etc.
+_mock_app.conf.get.return_value = None  # RECORDS_PER_BATCH, paths, etc.
 _mock_app.exchange = MagicMock()
 _mock_app.task = MagicMock(side_effect=_make_task_decorator)
 _mock_app.logger = MagicMock()
@@ -72,10 +72,10 @@ for _mod, _mock in _INJECT.items():
 
 from adscompstat import tasks  # noqa: E402  (import must follow sys.modules setup)
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _make_record(
     filepath="/path/file.xml",
@@ -89,8 +89,18 @@ def _make_record(
     classic_bibcode="2000ApJ...999..999Z",
     notes="",
 ):
-    return (filepath, doi, issns, bibdata, classic_match,
-            status, matchtype, bibcode, classic_bibcode, notes)
+    return (
+        filepath,
+        doi,
+        issns,
+        bibdata,
+        classic_match,
+        status,
+        matchtype,
+        bibcode,
+        classic_bibcode,
+        notes,
+    )
 
 
 def _make_summary_row(vol="1", fraction=0.9, count=100, by_year_json=None):
@@ -101,10 +111,11 @@ def _make_summary_row(vol="1", fraction=0.9, count=100, by_year_json=None):
     get_completeness_fraction's ``by_year`` list.
     """
     if by_year_json is None:
-        by_year_json = json.dumps([
-            {"year": "2000", "ADS_records": 90, "Crossref_records": 100,
-             "completeness": 0.9},
-        ])
+        by_year_json = json.dumps(
+            [
+                {"year": "2000", "ADS_records": 90, "Crossref_records": 100, "completeness": 0.9},
+            ]
+        )
     return ("ApJ", vol, fraction, count, by_year_json)
 
 
@@ -112,8 +123,8 @@ def _make_summary_row(vol="1", fraction=0.9, count=100, by_year_json=None):
 # task_clear_classic_data
 # ---------------------------------------------------------------------------
 
-class TestTaskClearClassicData(unittest.TestCase):
 
+class TestTaskClearClassicData(unittest.TestCase):
     @patch("adscompstat.tasks.db")
     def test_success_calls_clear(self, mock_db):
         tasks.task_clear_classic_data()
@@ -129,8 +140,8 @@ class TestTaskClearClassicData(unittest.TestCase):
 # task_write_block
 # ---------------------------------------------------------------------------
 
-class TestTaskWriteBlock(unittest.TestCase):
 
+class TestTaskWriteBlock(unittest.TestCase):
     @patch("adscompstat.tasks.db")
     def test_success_calls_write_block(self, mock_db):
         table = MagicMock()
@@ -148,8 +159,8 @@ class TestTaskWriteBlock(unittest.TestCase):
 # task_write_matched_record_to_db
 # ---------------------------------------------------------------------------
 
-class TestTaskWriteMatchedRecordToDb(unittest.TestCase):
 
+class TestTaskWriteMatchedRecordToDb(unittest.TestCase):
     @patch("adscompstat.tasks.db")
     def test_none_record_skips_db(self, mock_db):
         tasks.task_write_matched_record_to_db(None)
@@ -182,8 +193,8 @@ class TestTaskWriteMatchedRecordToDb(unittest.TestCase):
 # task_process_logfile
 # ---------------------------------------------------------------------------
 
-class TestTaskProcessLogfile(unittest.TestCase):
 
+class TestTaskProcessLogfile(unittest.TestCase):
     def _run(self, files, batch_count=100, harvest_dir="/harvest/"):
         def conf_get(key, default=None):
             if key == "RECORDS_PER_BATCH":
@@ -192,9 +203,9 @@ class TestTaskProcessLogfile(unittest.TestCase):
                 return harvest_dir
             return default
 
-        with patch("adscompstat.tasks.app") as mock_app, \
-             patch("adscompstat.tasks.utils") as mock_utils, \
-             patch.object(tasks, "task_process_meta") as mock_meta:
+        with patch("adscompstat.tasks.app") as mock_app, patch(
+            "adscompstat.tasks.utils"
+        ) as mock_utils, patch.object(tasks, "task_process_meta") as mock_meta:
             mock_app.conf.get.side_effect = conf_get
             mock_utils.read_updateagent_log.return_value = files
             mock_meta.delay = MagicMock()
@@ -225,8 +236,9 @@ class TestTaskProcessLogfile(unittest.TestCase):
         self.assertEqual(len(second_batch), 2)
 
     def test_exception_is_caught(self):
-        with patch("adscompstat.tasks.app") as mock_app, \
-             patch("adscompstat.tasks.utils") as mock_utils:
+        with patch("adscompstat.tasks.app") as mock_app, patch(
+            "adscompstat.tasks.utils"
+        ) as mock_utils:
             mock_app.conf.get.return_value = 100
             mock_utils.read_updateagent_log.side_effect = Exception("file not found")
             tasks.task_process_logfile("/missing.log")
@@ -236,11 +248,18 @@ class TestTaskProcessLogfile(unittest.TestCase):
 # task_process_meta
 # ---------------------------------------------------------------------------
 
-class TestTaskProcessMeta(unittest.TestCase):
 
-    def _run_meta(self, infile_batch, process_return=None, process_raise=None,
-                  bibstem="ApJ..", bibcode="2000ApJ...999..999Z",
-                  doi="10.1234/test", xmatch_result=None):
+class TestTaskProcessMeta(unittest.TestCase):
+    def _run_meta(
+        self,
+        infile_batch,
+        process_return=None,
+        process_raise=None,
+        bibstem="ApJ..",
+        bibcode="2000ApJ...999..999Z",
+        doi="10.1234/test",
+        xmatch_result=None,
+    ):
         """
         Run task_process_meta with mocked dependencies.
 
@@ -254,11 +273,13 @@ class TestTaskProcessMeta(unittest.TestCase):
         }
         resolved_xmatch = default_xmatch if xmatch_result is None else xmatch_result
 
-        with patch("adscompstat.tasks.utils") as mock_utils, \
-             patch("adscompstat.tasks.db") as mock_db, \
-             patch("adscompstat.tasks.BibcodeGenerator") as mock_bibgen_cls, \
-             patch("adscompstat.tasks.CrossrefMatcher") as mock_matcher_cls, \
-             patch.object(tasks, "task_write_matched_record_to_db") as mock_write:
+        with patch("adscompstat.tasks.utils") as mock_utils, patch(
+            "adscompstat.tasks.db"
+        ) as mock_db, patch("adscompstat.tasks.BibcodeGenerator") as mock_bibgen_cls, patch(
+            "adscompstat.tasks.CrossrefMatcher"
+        ) as mock_matcher_cls, patch.object(
+            tasks, "task_write_matched_record_to_db"
+        ) as mock_write:
             mock_write.delay = MagicMock()
 
             if process_raise:
@@ -353,7 +374,7 @@ class TestTaskProcessMeta(unittest.TestCase):
         delay = self._run_meta(
             ["/path/noindex.xml"],
             process_return=process_return,
-            xmatch_result={},   # falsy → xmatchResult is empty
+            xmatch_result={},  # falsy → xmatchResult is empty
         )
         delay.assert_called_once()
         record = delay.call_args[0][0]
@@ -368,10 +389,11 @@ class TestTaskProcessMeta(unittest.TestCase):
             "master_bibdata": {},
             "record": {},
         }
-        with patch("adscompstat.tasks.utils") as mock_utils, \
-             patch("adscompstat.tasks.db") as mock_db, \
-             patch("adscompstat.tasks.BibcodeGenerator") as mock_bibgen_cls, \
-             patch.object(tasks, "task_write_matched_record_to_db") as mock_write:
+        with patch("adscompstat.tasks.utils") as mock_utils, patch(
+            "adscompstat.tasks.db"
+        ) as mock_db, patch("adscompstat.tasks.BibcodeGenerator") as mock_bibgen_cls, patch.object(
+            tasks, "task_write_matched_record_to_db"
+        ) as mock_write:
             mock_write.delay = MagicMock()
             mock_utils.process_one_meta_xml.return_value = process_return
             mock_db.query_bibstem.side_effect = Exception("db error")
@@ -408,11 +430,12 @@ class TestTaskProcessMeta(unittest.TestCase):
 # task_completeness_per_bibstem
 # ---------------------------------------------------------------------------
 
-class TestTaskCompletenessPerbibstem(unittest.TestCase):
 
+class TestTaskCompletenessPerbibstem(unittest.TestCase):
     def _run(self, bibstem, db_result, completeness_bundle=None, write_raises=False):
-        with patch("adscompstat.tasks.db") as mock_db, \
-             patch("adscompstat.tasks.utils") as mock_utils:
+        with patch("adscompstat.tasks.db") as mock_db, patch(
+            "adscompstat.tasks.utils"
+        ) as mock_utils:
             mock_db.query_completeness_per_bibstem.return_value = db_result
             mock_utils.get_completeness_fraction.return_value = completeness_bundle or {
                 "volumeIndexable": 50,
@@ -477,8 +500,9 @@ class TestTaskCompletenessPerbibstem(unittest.TestCase):
 
     def test_completeness_fraction_exception_is_caught(self):
         db_result = [("0990", "2000", "Matched", "canonical", 10)]
-        with patch("adscompstat.tasks.db") as mock_db, \
-             patch("adscompstat.tasks.utils") as mock_utils:
+        with patch("adscompstat.tasks.db") as mock_db, patch(
+            "adscompstat.tasks.utils"
+        ) as mock_utils:
             mock_db.query_completeness_per_bibstem.return_value = db_result
             mock_utils.get_completeness_fraction.side_effect = Exception("calc err")
             tasks.task_completeness_per_bibstem("ApJ")
@@ -493,11 +517,12 @@ class TestTaskCompletenessPerbibstem(unittest.TestCase):
 # task_do_all_completeness
 # ---------------------------------------------------------------------------
 
-class TestTaskDoAllCompleteness(unittest.TestCase):
 
+class TestTaskDoAllCompleteness(unittest.TestCase):
     def test_dispatches_per_bibstem_and_clears(self):
-        with patch("adscompstat.tasks.db") as mock_db, \
-             patch.object(tasks, "task_completeness_per_bibstem") as mock_per:
+        with patch("adscompstat.tasks.db") as mock_db, patch.object(
+            tasks, "task_completeness_per_bibstem"
+        ) as mock_per:
             mock_per.delay = MagicMock()
             mock_db.query_master_bibstems.return_value = [("ApJ",), ("AJ..",)]
             tasks.task_do_all_completeness()
@@ -508,8 +533,9 @@ class TestTaskDoAllCompleteness(unittest.TestCase):
             self.assertIn("AJ..", calls)
 
     def test_empty_bibstems_skips_clear(self):
-        with patch("adscompstat.tasks.db") as mock_db, \
-             patch.object(tasks, "task_completeness_per_bibstem") as mock_per:
+        with patch("adscompstat.tasks.db") as mock_db, patch.object(
+            tasks, "task_completeness_per_bibstem"
+        ) as mock_per:
             mock_per.delay = MagicMock()
             mock_db.query_master_bibstems.return_value = []
             tasks.task_do_all_completeness()
@@ -525,6 +551,7 @@ class TestTaskDoAllCompleteness(unittest.TestCase):
 # ---------------------------------------------------------------------------
 # task_export_completeness_to_json
 # ---------------------------------------------------------------------------
+
 
 class TestTaskExportCompletenessToJson(unittest.TestCase):
     """
@@ -543,13 +570,13 @@ class TestTaskExportCompletenessToJson(unittest.TestCase):
 
         ``rows_by_bib`` maps bibstem string → list of row tuples.
         """
-        with patch("adscompstat.tasks.db") as mock_db, \
-             patch("adscompstat.tasks.utils") as mock_utils, \
-             patch("adscompstat.tasks.app") as mock_app:
+        with patch("adscompstat.tasks.db") as mock_db, patch(
+            "adscompstat.tasks.utils"
+        ) as mock_utils, patch("adscompstat.tasks.app") as mock_app:
             mock_app.conf.get.return_value = export_file
             mock_db.query_summary_bibstems.return_value = bibstems
-            mock_db.query_summary_single_bibstem.side_effect = (
-                lambda _app, bib: rows_by_bib.get(bib, [])
+            mock_db.query_summary_single_bibstem.side_effect = lambda _app, bib: rows_by_bib.get(
+                bib, []
             )
             tasks.task_export_completeness_to_json()
             return mock_db, mock_utils
@@ -571,23 +598,18 @@ class TestTaskExportCompletenessToJson(unittest.TestCase):
 
     def test_vfrac_rounding_in_year_data(self):
         # ADS=9, Crossref=10 → vfrac = floor(10000 * 0.9 + 0.5) / 10000 = 0.9
-        by_year = json.dumps([
-            {"year": "2001", "ADS_records": 9, "Crossref_records": 10,
-             "completeness": 0.9}
-        ])
+        by_year = json.dumps(
+            [{"year": "2001", "ADS_records": 9, "Crossref_records": 10, "completeness": 0.9}]
+        )
         row = _make_summary_row(by_year_json=by_year)
         _, mock_utils = self._run(["ApJ"], {"ApJ": [row]})
         alldata = mock_utils.export_completeness_data.call_args[0][0]
         details = alldata[0]["completeness_details"]
         year2001 = next(x for x in details if x["year"] == "2001")
-        self.assertAlmostEqual(
-            year2001["volumes"][0]["completeness_fraction"], 0.9, places=4
-        )
+        self.assertAlmostEqual(year2001["volumes"][0]["completeness_fraction"], 0.9, places=4)
 
     def test_zero_crossref_count_gives_zero_vfrac(self):
-        by_year = json.dumps([
-            {"year": "2002", "ADS_records": 0, "Crossref_records": 0}
-        ])
+        by_year = json.dumps([{"year": "2002", "ADS_records": 0, "Crossref_records": 0}])
         row = _make_summary_row(by_year_json=by_year)
         _, mock_utils = self._run(["ApJ"], {"ApJ": [row]})
         alldata = mock_utils.export_completeness_data.call_args[0][0]
@@ -604,9 +626,7 @@ class TestTaskExportCompletenessToJson(unittest.TestCase):
         row = _make_summary_row(fraction=fraction, count=10)
         _, mock_utils = self._run(["ApJ"], {"ApJ": [row]})
         alldata = mock_utils.export_completeness_data.call_args[0][0]
-        self.assertAlmostEqual(
-            alldata[0]["title_completeness_fraction"], expected_avg, places=4
-        )
+        self.assertAlmostEqual(alldata[0]["title_completeness_fraction"], expected_avg, places=4)
 
     def test_integer_fraction_still_exported_correctly(self):
         # r[2] is int (not float) — branch: r2_export = r[2], avg still computed
@@ -616,10 +636,12 @@ class TestTaskExportCompletenessToJson(unittest.TestCase):
         self.assertIsNotNone(alldata[0]["title_completeness_fraction"])
 
     def test_multiple_years_earliest_and_latest(self):
-        by_year = json.dumps([
-            {"year": "1998", "ADS_records": 80, "Crossref_records": 100},
-            {"year": "2005", "ADS_records": 90, "Crossref_records": 100},
-        ])
+        by_year = json.dumps(
+            [
+                {"year": "1998", "ADS_records": 80, "Crossref_records": 100},
+                {"year": "2005", "ADS_records": 90, "Crossref_records": 100},
+            ]
+        )
         row = _make_summary_row(by_year_json=by_year)
         _, mock_utils = self._run(["ApJ"], {"ApJ": [row]})
         alldata = mock_utils.export_completeness_data.call_args[0][0]
@@ -640,9 +662,9 @@ class TestTaskExportCompletenessToJson(unittest.TestCase):
         mock_utils.export_completeness_data.assert_not_called()
 
     def test_exception_at_query_is_caught(self):
-        with patch("adscompstat.tasks.db") as mock_db, \
-             patch("adscompstat.tasks.utils"), \
-             patch("adscompstat.tasks.app"):
+        with patch("adscompstat.tasks.db") as mock_db, patch("adscompstat.tasks.utils"), patch(
+            "adscompstat.tasks.app"
+        ):
             mock_db.query_summary_bibstems.side_effect = Exception("db err")
             tasks.task_export_completeness_to_json()
 
@@ -651,17 +673,17 @@ class TestTaskExportCompletenessToJson(unittest.TestCase):
 # task_retry_records
 # ---------------------------------------------------------------------------
 
-class TestTaskRetryRecords(unittest.TestCase):
 
+class TestTaskRetryRecords(unittest.TestCase):
     def _run(self, db_rows, batch_count=100):
         def conf_get(key, default=None):
             if key == "RECORDS_PER_BATCH":
                 return batch_count
             return default
 
-        with patch("adscompstat.tasks.app") as mock_app, \
-             patch("adscompstat.tasks.db") as mock_db, \
-             patch.object(tasks, "task_process_meta") as mock_meta:
+        with patch("adscompstat.tasks.app") as mock_app, patch(
+            "adscompstat.tasks.db"
+        ) as mock_db, patch.object(tasks, "task_process_meta") as mock_meta:
             mock_app.conf.get.side_effect = conf_get
             mock_meta.delay = MagicMock()
             mock_db.query_retry_files.return_value = db_rows
@@ -693,8 +715,7 @@ class TestTaskRetryRecords(unittest.TestCase):
         self.assertEqual(len(second), 2)
 
     def test_exception_is_caught(self):
-        with patch("adscompstat.tasks.app") as mock_app, \
-             patch("adscompstat.tasks.db") as mock_db:
+        with patch("adscompstat.tasks.app") as mock_app, patch("adscompstat.tasks.db") as mock_db:
             mock_app.conf.get.return_value = 100
             mock_db.query_retry_files.side_effect = Exception("query error")
             tasks.task_retry_records("failed")

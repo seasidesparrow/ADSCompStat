@@ -24,8 +24,8 @@ dependencies = [
     'psycopg2-binary==2.9.3',
     'SQLAlchemy-Utils==0.38.2',
     'alembic==1.0.0',
-    'adsingestp @ git+https://github.com/adsabs/ADSIngestParser.git@v0.9.41',
-    'adsenrich @ git+https://github.com/adsabs/ADSIngestEnrichment.git@v0.9.24',
+    'adsingestp @ git+https://github.com/adsabs/ADSIngestParser.git@v0.9.44',
+    'adsenrich @ git+https://github.com/adsabs/ADSIngestEnrichment.git@v0.9.28',
 ]
 
 
@@ -36,6 +36,7 @@ Documentation = "https://adscompstat.readthedocs.io"
 
 [project.optional-dependencies]
 dev = [
+    'pip<21.4',
     'black==23.1.0',
     'flake8==5.0.4',
     'isort==5.12.0',

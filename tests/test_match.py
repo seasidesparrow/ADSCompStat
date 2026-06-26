@@ -99,8 +99,8 @@ class TestMatch(unittest.TestCase):
     def test__match_bibcode_permutations_related_bibstem(self):
         # Bibstems are different but related → partial with bibstem in errs
         cm = CrossrefMatcher(related_bibstems=[["ApJ..", "ApJS."]])
-        bibcode_a = "2000ApJ...999..999Z"   # bibstem = "ApJ.."
-        bibcode_b = "2000ApJS..999..999Z"   # bibstem = "ApJS."
+        bibcode_a = "2000ApJ...999..999Z"  # bibstem = "ApJ.."
+        bibcode_b = "2000ApJS..999..999Z"  # bibstem = "ApJS."
         result = cm._match_bibcode_permutations(bibcode_a, bibcode_b)
         self.assertEqual(result["match"], "partial")
         self.assertEqual(result["bibcode"], bibcode_b)
@@ -110,8 +110,8 @@ class TestMatch(unittest.TestCase):
     def test__match_bibcode_permutations_qualifier_diff(self):
         # Only qualifier differs → partial with qual in errs
         cm = CrossrefMatcher()
-        bibcode_a = "2000ApJ...999..999Z"   # qual = '.'
-        bibcode_b = "2000ApJ...999Q.999Z"   # qual = 'Q'
+        bibcode_a = "2000ApJ...999..999Z"  # qual = '.'
+        bibcode_b = "2000ApJ...999Q.999Z"  # qual = 'Q'
         result = cm._match_bibcode_permutations(bibcode_a, bibcode_b)
         self.assertEqual(result["match"], "partial")
         self.assertEqual(result["bibcode"], bibcode_b)
@@ -236,7 +236,7 @@ class TestMatch(unittest.TestCase):
         # CrossrefMatcher initialized with related bibstems; DOI resolves to a
         # related-bibstem bibcode → partial with bibstem in errs
         cm = CrossrefMatcher(related_bibstems=[["JGR..", "JGRD."]])
-        test_input_bibcode = "2000JGR...999..999Z"   # bibstem JGR..
+        test_input_bibcode = "2000JGR...999..999Z"  # bibstem JGR..
         test_bibcodesFromDoi = [("2000JGRD..999..999Z", "2000JGRD..999..999Z", "canonical")]
         test_bibcodesFromBib = []
         result = cm.match(test_input_bibcode, test_bibcodesFromDoi, test_bibcodesFromBib)

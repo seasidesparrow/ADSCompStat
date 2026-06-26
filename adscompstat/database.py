@@ -91,7 +91,12 @@ def query_completeness_per_bibstem(app, bibstem):
                     func.count(master.bibcode_meta),
                 )
                 .filter(func.substr(master.bibcode_meta, 5, 5) == bibstem)
-                .group_by(func.substr(master.bibcode_meta, 10, 5), func.substr(master.bibcode_meta, 1, 4), master.status, master.matchtype)
+                .group_by(
+                    func.substr(master.bibcode_meta, 10, 5),
+                    func.substr(master.bibcode_meta, 1, 4),
+                    master.status,
+                    master.matchtype,
+                )
                 .all()
             )
             return result

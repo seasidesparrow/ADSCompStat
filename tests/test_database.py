@@ -1,19 +1,18 @@
 import unittest
-from unittest.mock import MagicMock, call, patch
+from unittest.mock import MagicMock, patch
 
 from adscompstat import database as db
 from adscompstat.database import (
-    BibstemLookupException,
     DBClearClassicException,
     DBClearSummaryException,
     DBQueryException,
     DBWriteException,
 )
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def make_mock_app():
     """Return (mock_app, mock_session) where session_scope() is wired up."""
@@ -36,16 +35,26 @@ def _make_matched_record(
     bibcode_classic="2000ApJ...999..999Z",
     notes="",
 ):
-    return (filepath, doi, issns, bibdata, classic_match,
-            status, matchtype, bibcode_meta, bibcode_classic, notes)
+    return (
+        filepath,
+        doi,
+        issns,
+        bibdata,
+        classic_match,
+        status,
+        matchtype,
+        bibcode_meta,
+        bibcode_classic,
+        notes,
+    )
 
 
 # ---------------------------------------------------------------------------
 # query_bibstem
 # ---------------------------------------------------------------------------
 
-class TestQueryBibstem(unittest.TestCase):
 
+class TestQueryBibstem(unittest.TestCase):
     @patch("adscompstat.database.query_bibstem_by_issn")
     def test_hyphenated_issn_passed_as_is(self, mock_lookup):
         mock_lookup.return_value = ("ApJ",)
@@ -90,10 +99,14 @@ class TestQueryBibstem(unittest.TestCase):
     def test_stops_after_first_match(self, mock_lookup):
         # Only the first ISSN that yields a result should be used
         mock_lookup.return_value = ("ApJ",)
-        record = {"publication": {"ISSN": [
-            {"issnString": "0004-637X"},
-            {"issnString": "1538-4357"},
-        ]}}
+        record = {
+            "publication": {
+                "ISSN": [
+                    {"issnString": "0004-637X"},
+                    {"issnString": "1538-4357"},
+                ]
+            }
+        }
         result = db.query_bibstem(MagicMock(), record)
         self.assertEqual(result, "ApJ")
         mock_lookup.assert_called_once()
@@ -102,10 +115,14 @@ class TestQueryBibstem(unittest.TestCase):
     def test_skips_empty_issn_string(self, mock_lookup):
         # An ISSN entry with an empty string should be silently skipped
         mock_lookup.return_value = ("ApJ",)
-        record = {"publication": {"ISSN": [
-            {"issnString": ""},
-            {"issnString": "0004-637X"},
-        ]}}
+        record = {
+            "publication": {
+                "ISSN": [
+                    {"issnString": ""},
+                    {"issnString": "0004-637X"},
+                ]
+            }
+        }
         result = db.query_bibstem(MagicMock(), record)
         self.assertEqual(result, "ApJ")
         # lookup only called for the non-empty ISSN
@@ -117,8 +134,8 @@ class TestQueryBibstem(unittest.TestCase):
 # clear_classic_data
 # ---------------------------------------------------------------------------
 
-class TestClearClassicData(unittest.TestCase):
 
+class TestClearClassicData(unittest.TestCase):
     def test_success_deletes_three_tables(self):
         mock_app, mock_session = make_mock_app()
         db.clear_classic_data(mock_app)
@@ -138,8 +155,8 @@ class TestClearClassicData(unittest.TestCase):
 # clear_summary_data
 # ---------------------------------------------------------------------------
 
-class TestClearSummaryData(unittest.TestCase):
 
+class TestClearSummaryData(unittest.TestCase):
     def test_success(self):
         mock_app, mock_session = make_mock_app()
         db.clear_summary_data(mock_app)
@@ -159,8 +176,8 @@ class TestClearSummaryData(unittest.TestCase):
 # query_master_by_doi
 # ---------------------------------------------------------------------------
 
-class TestQueryMasterByDoi(unittest.TestCase):
 
+class TestQueryMasterByDoi(unittest.TestCase):
     def test_returns_query_result(self):
         mock_app, mock_session = make_mock_app()
         expected = [("10.1234/abc",)]
@@ -185,8 +202,8 @@ class TestQueryMasterByDoi(unittest.TestCase):
 # query_retry_files
 # ---------------------------------------------------------------------------
 
-class TestQueryRetryFiles(unittest.TestCase):
 
+class TestQueryRetryFiles(unittest.TestCase):
     def test_returns_filepaths(self):
         mock_app, mock_session = make_mock_app()
         expected = [("/path/a.xml",), ("/path/b.xml",)]
@@ -205,8 +222,8 @@ class TestQueryRetryFiles(unittest.TestCase):
 # write_block
 # ---------------------------------------------------------------------------
 
-class TestWriteBlock(unittest.TestCase):
 
+class TestWriteBlock(unittest.TestCase):
     def test_success_calls_bulk_insert(self):
         mock_app, mock_session = make_mock_app()
         table = MagicMock()
@@ -228,8 +245,8 @@ class TestWriteBlock(unittest.TestCase):
 # write_matched_record
 # ---------------------------------------------------------------------------
 
-class TestWriteMatchedRecord(unittest.TestCase):
 
+class TestWriteMatchedRecord(unittest.TestCase):
     def test_insert_new_record_when_result_empty(self):
         # Empty result from query_master_by_doi → new row added
         mock_app, mock_session = make_mock_app()
@@ -258,8 +275,8 @@ class TestWriteMatchedRecord(unittest.TestCase):
 # write_completeness_summary
 # ---------------------------------------------------------------------------
 
-class TestWriteCompletenessSummary(unittest.TestCase):
 
+class TestWriteCompletenessSummary(unittest.TestCase):
     def _summary_data(self):
         return ["ApJ", "999", 100, 0.95, "[]", "[]"]
 
@@ -282,8 +299,8 @@ class TestWriteCompletenessSummary(unittest.TestCase):
 # update_master_by_doi
 # ---------------------------------------------------------------------------
 
-class TestUpdateMasterByDoi(unittest.TestCase):
 
+class TestUpdateMasterByDoi(unittest.TestCase):
     def test_success_calls_filter_update_commit(self):
         mock_app, mock_session = make_mock_app()
         update = {"master_doi": "10.1234/abc", "status": "Matched"}

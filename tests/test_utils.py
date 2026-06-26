@@ -105,9 +105,7 @@ class TestUtils(unittest.TestCase):
         # whatever the parser returns.
         mock_parser_class.return_value.parse.return_value = {
             "persistentIDs": [{"DOI": "10.3847/0004-637X/816/1/36"}],
-            "publication": {
-                "ISSN": [{"pubtype": "electronic", "issnString": "1538-4357"}]
-            },
+            "publication": {"ISSN": [{"pubtype": "electronic", "issnString": "1538-4357"}]},
             "authors": [{"surname": "Author", "given_name": "First"}],
             "title": "Test Title",
             "pagination": {"firstpage": "36"},
@@ -243,9 +241,9 @@ class TestUtils(unittest.TestCase):
     def test_load_classic_canonical_list_bad_lines(self):
         # Lines that are not exactly 19 chars should be silently skipped
         content = (
-            "2020ApJ...777...13A\n"   # valid (19 chars)
-            "TOOSHORT\n"              # invalid
-            "2020ApJ...777...14Q\n"   # valid
+            "2020ApJ...777...13A\n"  # valid (19 chars)
+            "TOOSHORT\n"  # invalid
+            "2020ApJ...777...14Q\n"  # valid
         )
         with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
             f.write(content)

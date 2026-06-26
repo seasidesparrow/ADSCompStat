@@ -262,9 +262,13 @@ def task_completeness_per_bibstem(bibstem):
             mtype = r[3]
             count = r[4]
             if volumeSummary.get(vol, None):
-                volumeSummary[vol].append({"year": year, "status": stat, "matchtype": mtype, "count": count})
+                volumeSummary[vol].append(
+                    {"year": year, "status": stat, "matchtype": mtype, "count": count}
+                )
             else:
-                volumeSummary[vol] = [{"year": year, "status": stat, "matchtype": mtype, "count": count}]
+                volumeSummary[vol] = [
+                    {"year": year, "status": stat, "matchtype": mtype, "count": count}
+                ]
         for k, v in volumeSummary.items():
             try:
                 completenessBundle = utils.get_completeness_fraction(v)
@@ -309,58 +313,51 @@ def task_export_completeness_to_json():
         allData = []
         bibstems = db.query_summary_bibstems(app)
         for bib in bibstems:
-            completeness = []
             result = db.query_summary_single_bibstem(app, bib)
             paperCount = 0
             averageCompleteness = 0.0
-            volume_per_year = {}
             volumes = {}
             for r in result:
                 vol = r[1]
                 try:
                     # r[4] is the "complete_by_year" column
                     years = json.loads(r[4])
-                except:
+                except Exception as err:
+                    logger.debug("No year found in result volume: %s" % err)
                     years = []
                 for y in years:
                     year = y.get("year", "0")
                     adscount = y.get("ADS_records", 0)
                     xrfcount = y.get("Crossref_records", 0)
                     if xrfcount > 0:
-                        vfrac = math.floor(
-                            10000. * (adscount/xrfcount) + 0.5) / 10000.0
+                        vfrac = math.floor(10000.0 * (adscount / xrfcount) + 0.5) / 10000.0
                     else:
                         vfrac = 0.0
                     volcomp = {
                         "volume": vol,
                         "ADS_records": adscount,
                         "Crossref_records": xrfcount,
-                        "completeness_fraction": vfrac
+                        "completeness_fraction": vfrac,
                     }
                     if volumes.get(year):
                         volumes[year].append(volcomp)
                     else:
                         volumes[year] = [volcomp]
-                if type(r[2]) == float:
-                    r2_export = math.floor(10000 * r[2] + 0.5) / 10000.0
-                else:
-                    r2_export = r[2]
                 paperCount += r[3]
                 averageCompleteness += r[3] * r[2]
             averageCompleteness = averageCompleteness / paperCount
             avg_export = math.floor(10000 * averageCompleteness + 0.5) / 10000.0
-            #restructure volumes
+            # restructure volumes
             volcomp = []
             yearlist = []
             for k, v in volumes.items():
                 try:
                     int(k)
-                except:
-                    pass
+                except Exception as err:
+                    logger.debug("Variable 'year' is not an integer: %s" % err)
                 else:
                     yearlist.append(int(k))
-                output = {"year": k,
-                          "volumes": v}
+                output = {"year": k, "volumes": v}
                 volcomp.append(output)
             yearlist = list(set(yearlist))
             earliestYear = min(yearlist)
@@ -371,7 +368,7 @@ def task_export_completeness_to_json():
                     "title_completeness_fraction": avg_export,
                     "completeness_details": volcomp,
                     "earliest_year": earliestYear,
-                    "latest_year": latestYear
+                    "latest_year": latestYear,
                 }
             )
         if allData:
